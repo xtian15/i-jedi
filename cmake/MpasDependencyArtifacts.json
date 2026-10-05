@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "bufr_sdk_provider": {
+    "sdk_spec_component": "bufr-query-0.0.4-xby4i4wjc37awovm45zc3d2gccgf6jwr",
+    "sdk_receipt_sha256": "65a0f963a706ec09daa88fdef0493b07dc6df3d42020b786ef706dd46f179305",
+    "wheel_sha256": "182e38bda2fb08cf7e63f4238eba1ead9a3677b515b603875631ae8ae5f3aad0",
+    "members": {
+      "bufr/__init__.py": "10e9a56b5c72783e9d685409fa91aed848d1c6a19568f55ac6be489dbf313d39",
+      "bufr/bufr_python.cpython-311-aarch64-linux-gnu.so": "7aa271b08f636e06baff5d210cd80d0fe16e1db0b84e25b1c0085e7cd8400d88",
+      "bufr/encoders/__init__.py": "9e562fa59c5e4acd1679d2a90a97b790ce70ec76bf76bb492e7eb9fded9c3373",
+      "bufr/encoders/netcdf/__init__.py": "c2d84f60c6d0ac7659a9bb7ae4c684a86faef20220a496456528ed4fee3ead6d"
+    }
+  },
+  "pocketfft": {
+    "repository": "https://github.com/mreineck/pocketfft.git",
+    "source_commit": "0fa0ef591e38c2758e3184c6c23e497b9f732ffa",
+    "members": {
+      "pocketfft_hdronly.h": "b15ca29cf47025e76c966d0c5a061e9b56e3e2b312cb05e993ee696f8d9812e5",
+      "LICENSE.md": "a85ca13fdf90160b64a0698215868c13b74d835ad0a4e2ba44713b8c5058a056"
+    }
+  }
+}

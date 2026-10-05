@@ -7,7 +7,10 @@
 
 #pragma once
 
-#include "mist/base/LinearVariableChange.h"
+#include <memory>
+
+#include "oops/util/Printable.h"
+#include "vader/vader.h"
 
 namespace oops {
 class Variables;
@@ -18,7 +21,9 @@ namespace ijedi {
 class Geometry;
 class State;
 
-class LinearVariableChange : public mist::LinearVariableChange {
+class Increment;
+
+class LinearVariableChange : public util::Printable {
  public:
   LinearVariableChange(const Geometry &, const eckit::Configuration &);
 
@@ -26,9 +31,18 @@ class LinearVariableChange : public mist::LinearVariableChange {
   /// sea_area_fraction) required by SeaWaterTemperature_B's Jacobian before
   /// handing the trajectory to the base class.
   void changeVarTraj(const State &, const oops::Variables &);
+  void changeVarTL(Increment &, const oops::Variables &) const;
+  void changeVarInverseTL(Increment &, const oops::Variables &) const;
+  void changeVarAD(Increment &, const oops::Variables &) const;
+  void changeVarInverseAD(Increment &, const oops::Variables &) const;
 
  private:
+  void selectVariables(Increment &, const oops::Variables &) const;
+  void ensureLinearPlan(oops::Variables &) const;
+  void print(std::ostream &) const override {}
   const Geometry & geom_;
+  std::unique_ptr<vader::Vader> vader_;
+  mutable oops::Variables varsVaderPopulates_;
 };
 
 }  // namespace ijedi

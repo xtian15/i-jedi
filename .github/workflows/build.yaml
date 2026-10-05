@@ -1,115 +1,93 @@
-name: Run all CI tests
+name: Complete MPAS interface qualification
 on: [pull_request]
+
+permissions:
+  contents: read
 
 jobs:
   run_all_tests:
-    runs-on: ubuntu-latest
-    name: Full CI (style and tests)
-    container: ghcr.io/noaa-emc/i-jedi:latest
+    runs-on: ubuntu-24.04-arm
+    # The qualified graph is native aarch64. Publishing its immutable consumer
+    # environment/inputs is a separate prerequisite; no older image fallback.
+    container: ${{ vars.IJEDI_MPAS_QUALIFICATION_IMAGE }}
+    env:
+      IJEDI_MPAS_QUALIFICATION_IMAGE: ${{ vars.IJEDI_MPAS_QUALIFICATION_IMAGE }}
+      IJEDI_MPAS_RELEASE_INPUTS_FILE: ${{ vars.IJEDI_MPAS_RELEASE_INPUTS_FILE }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      OMP_DYNAMIC: 'FALSE'
+      OMPI_ALLOW_RUN_AS_ROOT: '1'
+      OMPI_ALLOW_RUN_AS_ROOT_CONFIRM: '1'
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         path: i-jedi
         submodules: recursive
-        ssh-key: ${{ secrets.JCSDA_MIST_KEY }}
-    # Checkout mist from jcsda-internal
-    - name: checkout-mist
-      uses: actions/checkout@v6
-      with:
-        repository: "JCSDA-internal/mist"
-        ref: "feature/install" # Specify your branch here
-        path: i-jedi/bundle/mist
-        ssh-key: ${{ secrets.JCSDA_MIST_KEY }}
-    - name: Run ecbuild
+    - name: Require the immutable native qualification environment
       shell: bash
       run: |
-        su - nonroot
-        export jedi_cmake_ROOT=/opt/view
-        source /opt/spack-environment/activate.sh
-        cd $GITHUB_WORKSPACE
-        mkdir -p Build
-        cd Build
-        ecbuild -DMPI_ARGS="--map-by :OVERSUBSCRIBE" -DCLONE_MIST="OFF" ../i-jedi/bundle
-        cd ../i-jedi/bundle
-    - name: Check container libraries
-      id: check-container
-      shell: bash
-      run: |
-        MATCH=true
-        if [ -f /opt/jedi/etc/jedi_repo_hashes.txt ]; then
-          for d in $GITHUB_WORKSPACE/i-jedi/bundle/*; do
-            if [ -d "$d/.git" ]; then
-              REPO=$(basename $d)
-              if [[ "$REPO" == "ijedi" || "$REPO" == "mist" ]]; then
-                continue
-              fi
-              CURRENT_SHA=$(git -C $d rev-parse HEAD)
-              CONTAINER_SHA=$(grep "^$REPO " /opt/jedi/etc/jedi_repo_hashes.txt | cut -d' ' -f2 || true)
-              if [ "$CURRENT_SHA" != "$CONTAINER_SHA" ]; then
-                echo "$REPO has changed ($CONTAINER_SHA -> $CURRENT_SHA)"
-                MATCH=false
-              fi
-            fi
-          done
-        else
-          echo "No hash file found in container."
-          MATCH=false
+        unset BASH_ENV PYTHONPATH LD_PRELOAD
+        if [[ ! "$IJEDI_MPAS_QUALIFICATION_IMAGE" =~ ^[^@]+@sha256:[0-9a-f]{64}$ ]]; then
+          echo 'Missing approved digest-pinned MPAS qualification image.' >&2
+          exit 1
         fi
-        echo "match=$MATCH" >> $GITHUB_OUTPUT
-        
-        # Also generate a hash for caching if container doesn't match
-        HASH=$(find $GITHUB_WORKSPACE/i-jedi/bundle -maxdepth 2 -name .git -type d | sort | xargs -I {} git -C {}/.. rev-parse HEAD | sha256sum | awk '{print $1}')
-        echo "hash=$HASH" >> $GITHUB_OUTPUT
-    - name: Run coding style checks
+        test "$(uname -m)" = aarch64
+        test -n "$IJEDI_MPAS_RELEASE_INPUTS_FILE"
+        test -f "$IJEDI_MPAS_RELEASE_INPUTS_FILE"
+        command -v ecbuild cmake ctest python3
+        # The one locked runtime serves stock embedding and data scripts.
+        python3 -c 'import bufr, netCDF4, pycodestyle, socket; socket.gethostbyname(socket.gethostname())'
+    - name: Configure the exact graph once
       shell: bash
       run: |
-        su - nonroot
-        export jedi_cmake_ROOT=/opt/view
-        source /opt/spack-environment/activate.sh
-        cd $GITHUB_WORKSPACE/Build/ijedi
-        ctest -R coding_norms --output-on-failure
-    - name: Compile the code without using container libraries
-      if: steps.check-container.outputs.match == 'false'
+        unset BASH_ENV PYTHONPATH LD_PRELOAD
+        test ! -e "$GITHUB_WORKSPACE/Build"
+        mkdir "$GITHUB_WORKSPACE/Build"
+        cd "$GITHUB_WORKSPACE/Build"
+        ecbuild -C "$IJEDI_MPAS_RELEASE_INPUTS_FILE" -DIJEDI_MPAS_RELEASE_STAGE=pr1 \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMPI_ARGS="--map-by :OVERSUBSCRIBE" \
+          "$GITHUB_WORKSPACE/i-jedi/bundle"
+    - name: Build and qualify fresh I-JEDI products
       shell: bash
       run: |
-        su - nonroot
-        export jedi_cmake_ROOT=/opt/view
-        source /opt/spack-environment/activate.sh
-        cd $GITHUB_WORKSPACE
-        rm -rf Build
-        mkdir -p Build
-        cd Build
-        ecbuild -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install -DMPI_ARGS="--map-by :OVERSUBSCRIBE" ../i-jedi/bundle 
-        make -j4
-        make install
-    - name: Compile the code with container libraries
-      if: steps.check-container.outputs.match == 'true'
+        unset BASH_ENV PYTHONPATH LD_PRELOAD
+        python3 "$GITHUB_WORKSPACE/i-jedi/tools/qualification/run_p0_p2_release_gate.py" \
+          --source "$GITHUB_WORKSPACE/i-jedi" --build "$GITHUB_WORKSPACE/Build/ijedi" \
+          --manifest "$GITHUB_WORKSPACE/i-jedi/docs/P0_P2_REQUIRED_TESTS.json" \
+          --stage pr1 --output "$GITHUB_WORKSPACE/mpas-qualification" \
+          --lock-file "$GITHUB_WORKSPACE/mpas-qualification.lock" \
+          --build-jobs 2 --test-jobs 2
+    - name: Build all remaining dependency targets and run their full gate
       shell: bash
       run: |
-        echo "Libaries are installed"
-        ls -l /opt/jedi
-        su - nonroot
-        export jedi_cmake_ROOT=/opt/view
-        source /opt/spack-environment/activate.sh
-        cd $GITHUB_WORKSPACE
-        rm -rf Build
-        mkdir -p Build
-        cd Build
-        ls -l /opt/jedi
-        ls -l /opt/jedi/lib
-        ls -l /opt/jedi/include
-        ls -l /opt/jedi/bin
-        ecbuild -DMPI_ARGS="--map-by :OVERSUBSCRIBE" -DBUILD_JEDI=OFF -DCMAKE_PREFIX_PATH=/opt/jedi -DCMAKE_INSTALL_PREFIX=$GITHUB_WORKSPACE/install ../i-jedi/bundle 
-        cd ijedi
-        make -j4
-    - name: Run ctests
+        unset BASH_ENV PYTHONPATH LD_PRELOAD
+        cmake --build "$GITHUB_WORKSPACE/Build" -j2
+        ctest --test-dir "$GITHUB_WORKSPACE/Build" --no-tests=error \
+          --show-only=json-v1 > "$GITHUB_WORKSPACE/dependency-inventory.json"
+        ctest --test-dir "$GITHUB_WORKSPACE/Build" -j1 --no-tests=error \
+          -E '^ijedi_' --output-on-failure \
+          --output-junit "$GITHUB_WORKSPACE/dependency-results.xml"
+        python3 "$GITHUB_WORKSPACE/i-jedi/tools/qualification/check_dependency_results.py" \
+          --inventory "$GITHUB_WORKSPACE/dependency-inventory.json" \
+          --results "$GITHUB_WORKSPACE/dependency-results.xml"
+    - name: Authenticate final I-JEDI artifacts
       shell: bash
       run: |
-        su - nonroot
-        export jedi_cmake_ROOT=/opt/view
-        source /opt/spack-environment/activate.sh
-        cd $GITHUB_WORKSPACE/Build/ijedi
-        export OMPI_ALLOW_RUN_AS_ROOT=1
-        export OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
-        ctest --rerun-failed --output-on-failure --allow-run-as-root
+        unset BASH_ENV PYTHONPATH LD_PRELOAD
+        python3 "$GITHUB_WORKSPACE/i-jedi/tools/qualification/run_p0_p2_release_gate.py" \
+          --source "$GITHUB_WORKSPACE/i-jedi" --build "$GITHUB_WORKSPACE/Build/ijedi" \
+          --verify-receipt "$GITHUB_WORKSPACE/mpas-qualification/qualified.json"
+    - name: Retain qualification evidence
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: mpas-qualification
+        path: |
+          mpas-qualification/
+          dependency-inventory.json
+          dependency-results.xml
+        if-no-files-found: error

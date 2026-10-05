@@ -16,8 +16,11 @@ list(APPEND ijedi_src_files
   # Geometry
   Geometry/Geometry.cc
   Geometry/Geometry.h
+  Geometry/GeometryIterator.cc
+  Geometry/GeometryIterator.h
   Geometry/base/GeometryBase.cc
   Geometry/base/GeometryBase.h
+  Geometry/base/AtlasMeshBuilderContract.h
   Geometry/atlas/GeometryAtlas.cc
   Geometry/atlas/GeometryAtlas.h
   Geometry/gsibec/GeometryGsibec.cc
@@ -26,6 +29,8 @@ list(APPEND ijedi_src_files
   Geometry/gsibec/GsiGrid.h
   Geometry/mpas/GeometryMPAS.cc
   Geometry/mpas/GeometryMPAS.h
+  Geometry/mpas/MpasAtlasGeometry.cc
+  Geometry/mpas/MpasAtlasGeometry.h
   Geometry/mom6/GeometryMOM6.cc
   Geometry/mom6/GeometryMOM6.h
   Geometry/mom6/GeometryMOM6Utils.cc
@@ -39,10 +44,42 @@ list(APPEND ijedi_src_files
   # State
   State/State.cc
   State/State.h
+  State/StateBackend.cc
+  State/StateBackend.h
+  State/MpasFieldSetOwner.h
+
+  # One in-process MPAS-PyTorch bridge
+  Python/PythonRuntime.cc
+  Python/PythonRuntime.h
+  Python/MpasPythonAdapter.cc
+  Python/MpasPythonAdapter.h
+  Python/MpasBackendContext.cc
+  Python/MpasBackendContext.h
 
   # Increment
   Increment/Increment.cc
   Increment/Increment.h
+
+  # Native Atlas runtime operators
+  Interpolation/AtlasOperatorReceipt.h
+  Interpolation/AtlasMeshIntegrity.cc
+  Interpolation/AtlasMeshIntegrity.h
+  Interpolation/AtlasCellMeanEndpoint.cc
+  Interpolation/AtlasCellMeanEndpoint.h
+  Interpolation/LocalInterpolator.cc
+  Interpolation/LocalInterpolator.h
+  Interpolation/MpasAtlasPointOperator.cc
+  Interpolation/MpasAtlasPointOperator.h
+  Interpolation/MpasAtlasConservativeOperator.cc
+  Interpolation/MpasAtlasConservativeOperator.h
+
+  # Model interface support
+  Covariance/ErrorCovariance.h
+  ModelAux/ModelAuxControl.h
+  ModelAux/ModelAuxCovariance.h
+  ModelAux/ModelAuxIncrement.h
+  ModelData/ModelData.cc
+  ModelData/ModelData.h
 
   # IO
   Io/IoBase.cc
@@ -164,17 +201,40 @@ ecbuild_add_library(TARGET ${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
 
-target_link_libraries(${PROJECT_NAME} PUBLIC NetCDF::NetCDF_C NetCDF::NetCDF_CXX)
+# Direct include directories of the selected scientific targets must precede
+# every transitive SDK prefix, which may also contain unrelated JEDI headers.
+# This applies equally to build-tree and installed-package exports.
+# Some build-tree exports include a shared SDK prefix in their own direct
+# include list. Promote only namespace-specific roots, leaving shared prefixes
+# in the ordinary transitive list. ecbuild disables system treatment of imported
+# includes, so marking a shared prefix SYSTEM does not establish this ordering.
+set(_scientific_include_roots)
+foreach(_dependency oops vader atlas fckit eckit)
+  if(TARGET ${_dependency})
+    get_target_property(_includes ${_dependency} INTERFACE_INCLUDE_DIRECTORIES)
+    foreach(_include IN LISTS _includes)
+      if(NOT (EXISTS "${_include}/atlas/library/Library.h" AND
+              EXISTS "${_include}/netcdf.h"))
+        list(APPEND _scientific_include_roots "${_include}")
+      endif()
+    endforeach()
+  endif()
+endforeach()
+target_include_directories(${PROJECT_NAME} BEFORE PUBLIC ${_scientific_include_roots})
 
 # target_link_libraries( ${PROJECT_NAME} PUBLIC MPI::MPI_Fortran MPI::MPI_CXX )
 target_link_libraries(${PROJECT_NAME} PUBLIC eckit)
 target_link_libraries(${PROJECT_NAME} PUBLIC fckit)
 target_link_libraries(${PROJECT_NAME} PUBLIC atlas atlas_f)
 target_link_libraries(${PROJECT_NAME} PUBLIC oops)
-
-# Mist
-target_link_libraries(${PROJECT_NAME} PUBLIC mist_base)
-target_link_libraries(${PROJECT_NAME} PUBLIC mist_utils)
+target_link_libraries(${PROJECT_NAME} PUBLIC vader)
+# The SDK's shared include prefix also contains older JEDI headers. Put the
+# selected source-built graph ahead of that prefix; otherwise NetCDF's include
+# directory can silently substitute an unrelated installed Atlas/OOPS API.
+target_link_libraries(${PROJECT_NAME} PUBLIC NetCDF::NetCDF_C NetCDF::NetCDF_CXX)
+target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::embed)
+target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::Crypto)
+target_link_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
 
 # target_link_libraries( ${PROJECT_NAME} PUBLIC ufo )
 if(FMS_FOUND)

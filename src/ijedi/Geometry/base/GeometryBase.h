@@ -19,6 +19,8 @@ namespace eckit
 namespace ijedi
 {
 
+  class MpasBackendContext;
+
   class GeometryBase
   {
    public:
@@ -29,7 +31,8 @@ namespace ijedi
                                                 eckit::LocalConfiguration &,
                                                 atlas::FunctionSpace &,
                                                 atlas::FieldSet &,
-                                                bool &, int &);
+                                                bool &, int &,
+                                                std::shared_ptr<MpasBackendContext> &);
     virtual void print(std::ostream &) const = 0;
     virtual std::vector<double> verticalCoord(std::string &) const = 0;
 

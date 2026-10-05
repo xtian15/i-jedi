@@ -9,3 +9,10 @@ ecbuild_add_test( TARGET ijedi_coding_norms
                   COMMAND ${CPPLINT_PY}
                   ARGS --quiet --recursive ${CMAKE_CURRENT_SOURCE_DIR}
                   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin )
+
+if(BUILD_TESTING)
+  # Tests are directory-scoped. Root/test policies cannot classify the
+  # coding-norms test registered here; apply the same policy in its owner.
+  include(${PROJECT_SOURCE_DIR}/test/ProtectTestSchedule.cmake)
+  ijedi_protect_test_schedule()
+endif()

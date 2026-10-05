@@ -1,0 +1,25 @@
+geometry:
+  geometry_type: atlas
+  nlevels: 2
+  function space: StructuredColumns
+  grid:
+    type: regular_gaussian
+    N: 2
+
+model:
+  name: I-JEDI persistence
+  time step: PT15M
+  model variables: [air_temperature]
+
+model aux control: {}
+
+initial condition:
+  date: 2026-01-01T00:00:00Z
+  state variables: [air_temperature]
+  analytic init:
+    method: zero
+
+model test:
+  forecast length: PT1H
+  final norm: 0.0
+  tolerance: 1.0e-15

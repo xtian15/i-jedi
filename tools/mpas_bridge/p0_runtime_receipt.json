@@ -1,0 +1,26 @@
+{
+  "container": {
+    "architecture": "linux/arm64",
+    "image_id": "sha256:7921e5df331a489958eaf9d388a82cdaee9d1dc1dc8dede153a9adc62ced5619"
+  },
+  "mpas_pytorch": {
+    "source_commit": "14c94c5394eb4d29613112b56b99fa66cb97244a",
+    "version": "0.1.8",
+    "wheel_sha256": "7e3c2b5a95075519f2eb750333b55adc27ac9ccb5dcbca8fb2cdc5c2930cb20c"
+  },
+  "python": "3.11.7",
+  "runtime": {
+    "python": "3.11.7", "torch": "2.8.0+cpu", "numpy": "2.0.2",
+    "netcdf4": "1.7.4.1", "machine": "aarch64"
+  },
+  "scope": "exact_local_candidate_pending_complete_PR_qualification",
+  "requirements": "p0-runtime-linux-aarch64.requirements.txt",
+  "requirements_sha256": "a370ed1e8bbb02fbc2ce7faf01737b815d898758172a42e4e9966b6af642f434",
+  "sdk_python_provider": {
+    "distribution": "bufr-query-sdk", "version": "0.0.4",
+    "wheel_sha256": "182e38bda2fb08cf7e63f4238eba1ead9a3677b515b603875631ae8ae5f3aad0",
+    "sdk_receipt_sha256": "65a0f963a706ec09daa88fdef0493b07dc6df3d42020b786ef706dd46f179305",
+    "scope": "qualified read-only SDK provider; not portable or approved for publication"
+  },
+  "schema_version": 2
+}

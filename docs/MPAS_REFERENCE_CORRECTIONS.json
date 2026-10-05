@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "authority": "Scoped humidity reference correction; original hashes and numerical bounds retained",
+  "original_source_commit": "17622aa8df6c09e7d2d539be013e17dc6c3baed8",
+  "corrected_source_commit": "6af34b9e7be2ed2458cb4a7b7d2f58101c057b23",
+  "vader_source_commit": "cb75e639ca09da1b132a777a81f6fe56209f64dd",
+  "scientific_contract": "WaterVaporMixingRatioWrtMoistAir_A: rv/(1+rv), zero condensate derivatives; WetAir_A has a distinct product",
+  "validation_contract": "Second-order nonlinear convergence followed by roundoff; exact-stencil responses explicitly classified with tighter large-step checks",
+  "test_sources": {
+    "dycore-torch/mpas-pytorch/tests/test_assimilation_variables.py": {
+      "original_sha256": "6f32153152c9a68d02add48239256643f05cc01b6e743b934630ea95f98ab270",
+      "corrected_sha256": "6b965564332d8f487f3ac714d832ce0ed1f7ad441ea623973372cc73730cf640"
+    },
+    "dycore-torch/mpas-pytorch/tests/test_ijedi_contracts_real.py": {
+      "original_sha256": "3c05c3c1219ad29224bb4ca80d1a42f3cc9a2d0340512f4661930d13202cbe29",
+      "corrected_sha256": "4c114333942251bf4385f902907e2727e514a663ace9417e81ee210c77e526e8"
+    },
+    "dycore-torch/mpas-pytorch/tests/test_variable_registry.py": {
+      "original_sha256": "004a4ebeeb3cbe95a54b6ef6cf2589fe69547c303e2b7e365f9b68ef87fe181b",
+      "corrected_sha256": "3a25efcb76a6a86617630a0144df2f1d8f1fd06da550828c6e7fb74a7c69fbda"
+    },
+    "dycore-torch/mpas-pytorch/tests/test_analysis_coordinates_real.py": {
+      "original_sha256": "45d27a922b8cd42c648e2bb631116bed0f5d9df642c156c86fd95f3c3028135e",
+      "corrected_sha256": "0a7bc8f10a90f1d1636d1acd7165b331db2789b52644fe7ff5118d2b49dc688d"
+    }
+  }
+}
