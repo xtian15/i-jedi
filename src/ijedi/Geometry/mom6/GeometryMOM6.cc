@@ -37,6 +37,7 @@
 #include "oops/util/abor1_cpp.h"
 
 #include "ijedi/Geometry/mom6/GeometryMOM6.h"
+#include "ijedi/Geometry/base/AtlasMeshBuilderContract.h"
 #include "ijedi/Geometry/mom6/GeometryMOM6Utils.h"
 
 // ---------------------------------------------------------------------------
@@ -83,6 +84,7 @@ void GeometryMOM6::buildMom6FunctionSpace(const eckit::mpi::Comm & comm,
       /*quad_boundary_nodes=*/{}, /*quad_global_indices=*/{},
       meshConf);
 
+  bindMeshBuilderOwnership(mesh);
   mom6FunctionSpace_ = atlas::functionspace::NodeColumns(
       mesh, atlas::util::Config("mpi_comm", comm.name()));
 }
@@ -192,6 +194,12 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
   for (int k = 0; k < nActiveGlobal_; ++k)
     activeMap[active[k].jG * niEff_ + active[k].iG] = k;
 
+  // Atlas gather/scatter addresses global fields by global_index-1. The
+  // masked active space therefore needs dense IDs, distinct from file indices.
+  const auto atlasNodeId = [&](int iG, int jG) -> atlas::gidx_t {
+    return static_cast<atlas::gidx_t>(activeMap.at(jG * niEff_ + iG) + 1);
+  };
+
   // --- Step 3: identify ghost nodes ---
   // Collect owned points, then scan their neighbours for cross-rank
   // active points.
@@ -286,10 +294,8 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
     if (activeMap.find(jG1 * niEff_ + iG ) == activeMap.end()) continue;
     // SW, SE, NE, NW corners — global node indices (1-based)
     quadNodes.push_back({
-        static_cast<atlas::gidx_t>(jG  * niEff_ + iG  + 1),
-        static_cast<atlas::gidx_t>(jG  * niEff_ + iG1 + 1),
-        static_cast<atlas::gidx_t>(jG1 * niEff_ + iG1 + 1),
-        static_cast<atlas::gidx_t>(jG1 * niEff_ + iG  + 1)});
+        atlasNodeId(iG, jG), atlasNodeId(iG1, jG),
+        atlasNodeId(iG1, jG1), atlasNodeId(iG, jG1)});
     quadGidx.push_back(0);   // placeholder; filled after allGather below
   }
   // --- Step 4.6: fold quads along the tripolar northern seam ---
@@ -314,10 +320,8 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
       if (activeMap.find(jG * niEff_ + foldNE) == activeMap.end()) continue;
       if (activeMap.find(jG * niEff_ + foldNW) == activeMap.end()) continue;
       quadNodes.push_back({
-          static_cast<atlas::gidx_t>(jG * niEff_ + iG     + 1),
-          static_cast<atlas::gidx_t>(jG * niEff_ + iG1    + 1),
-          static_cast<atlas::gidx_t>(jG * niEff_ + foldNE + 1),
-          static_cast<atlas::gidx_t>(jG * niEff_ + foldNW + 1)});
+          atlasNodeId(iG, jG), atlasNodeId(iG1, jG),
+          atlasNodeId(foldNE, jG), atlasNodeId(foldNW, jG)});
       quadGidx.push_back(0);  // filled by allGather offset below
     }
   }
@@ -343,7 +347,7 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
     const int jG = jediPoints_[n].second;
     lons[n]      = lonGlobal[jG * niEff_ + iG];
     lats[n]      = latGlobal[jG * niEff_ + iG];
-    globalIdx[n] = static_cast<gidx_t>(jG * niEff_ + iG + 1);  // 1-based
+    globalIdx[n] = atlasNodeId(iG, jG);  // dense active-space ID, 1-based
     remoteIdx[n] = static_cast<idx_t>(n + 1);                   // 1-based local
   }
   for (int g = 0; g < nGhost; ++g) {
@@ -353,7 +357,7 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
     const int jG = jediPoints_[n].second;
     lons[n]      = lonGlobal[jG * niEff_ + iG];
     lats[n]      = latGlobal[jG * niEff_ + iG];
-    globalIdx[n] = static_cast<gidx_t>(jG * niEff_ + iG + 1);  // 1-based
+    globalIdx[n] = atlasNodeId(iG, jG);  // dense active-space ID, 1-based
     remoteIdx[n] = static_cast<idx_t>(ownerLocalIdx[gk] + 1);  // 1-based on owner
     ghosts[n]     = 1;
     partitions[n] = partOf[gk];
@@ -369,10 +373,27 @@ void GeometryMOM6::buildJediFunctionSpace(const eckit::mpi::Comm & comm,
       /*tri_boundary_nodes=*/{}, /*tri_global_indices=*/{},
       quadNodes, quadGidx,
       meshConf);
+  bindMeshBuilderOwnership(mesh);
   atlas::mesh::actions::build_halo(mesh, 1);
 
   functionSpace_ = atlas::functionspace::NodeColumns(
       mesh, atlas::util::Config("mpi_comm", comm.name()));
+
+  // Preserve the physical structured address separately, including every halo
+  // node. Never reinterpret a dense Atlas ID as an index into a restart file.
+  atlas::Field structuredIndex("mom6_structured_index",
+      atlas::array::make_datatype<atlas::gidx_t>(),
+      atlas::array::make_shape(mesh.nodes().size()));
+  auto structured = atlas::array::make_view<atlas::gidx_t, 1>(structuredIndex);
+  const auto dense = atlas::array::make_view<atlas::gidx_t, 1>(mesh.nodes().global_index());
+  for (atlas::idx_t node = 0; node < mesh.nodes().size(); ++node) {
+    if (dense(node) <= 0 || dense(node) > nActiveGlobal_) {
+      throw eckit::BadValue("MOM6 Atlas node has an invalid active-space ID", Here());
+    }
+    const auto &point = active[dense(node) - 1];
+    structured(node) = point.jG * niEff_ + point.iG + 1;
+  }
+  mesh.nodes().add(structuredIndex);
 
   oops::Log::info() << "GeometryMOM6 JEDI space: rank " << rank
                     << " nActiveGlobal=" << nActiveGlobal_

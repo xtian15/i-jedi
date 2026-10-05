@@ -1,0 +1,14 @@
+# Set IJEDI_REVIEW_INPUTS to the acquired, checksummed input bundle.
+set(_inputs "$ENV{IJEDI_REVIEW_INPUTS}")
+set(Python3_EXECUTABLE "$ENV{IJEDI_REVIEW_PYTHON}" CACHE FILEPATH "")
+set(IJEDI_MPAS_PYTHON "${Python3_EXECUTABLE}" CACHE FILEPATH "")
+set(IJEDI_MPAS_CASE_DIR "${_inputs}/case" CACHE PATH "")
+set(IJEDI_MPAS_WHEEL "${_inputs}/model.whl" CACHE FILEPATH "")
+set(IJEDI_MPAS_RUNTIME_RECEIPT "${_inputs}/runtime.json" CACHE FILEPATH "")
+set(IJEDI_MPAS_DIRECT_ORACLE "${_inputs}/direct.json" CACHE FILEPATH "")
+set(IJEDI_MPAS_GEOMETRY_CASES "${_inputs}/geometry-cases.json" CACHE FILEPATH "")
+set(IJEDI_MPAS_GEOMETRY_LOCATIONS "${_inputs}/geometry-locations" CACHE PATH "")
+# The analysis suite additionally requires these entries.
+set(IJEDI_MPAS_ANALYSIS_LOCATIONS "${_inputs}/analysis-locations.json" CACHE FILEPATH "")
+set(IJEDI_MPAS_CONTRACT_SOURCE_DIR "${_inputs}/model-contract-source" CACHE PATH "")
+unset(_inputs)

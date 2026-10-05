@@ -1,0 +1,43 @@
+geometry:
+  geometry_type: mpas
+  atlas compiler identity: @IJEDI_MPAS_ATLAS_COMPILER_IDENTITY@
+  python executable: "@IJEDI_MPAS_PYTHON@"
+  runtime receipt path: "@IJEDI_MPAS_RUNTIME_RECEIPT@"
+  wheel path: "@IJEDI_MPAS_WHEEL@"
+  wheel sha256: @IJEDI_MPAS_WHEEL_SHA256@
+  init path: "@IJEDI_MPAS_CASE_DIR@/x1.10242.init.nc"
+  grid path: "@IJEDI_MPAS_CASE_DIR@/x1.10242.grid.nc"
+  namelist path: "@IJEDI_MPAS_CASE_DIR@/namelist.atmosphere"
+  horizontal geometry receipt: @IJEDI_MPAS_HORIZONTAL_GEOMETRY_RECEIPT@
+  static vertical geometry receipt: @IJEDI_MPAS_STATIC_VERTICAL_GEOMETRY_RECEIPT@
+  geometry bundle receipt: @IJEDI_MPAS_GEOMETRY_BUNDLE_RECEIPT@
+  configuration receipt: @IJEDI_MPAS_CONFIGURATION_RECEIPT@
+  state schema digest: @IJEDI_MPAS_STATE_SCHEMA_DIGEST@
+  python version: @IJEDI_MPAS_PYTHON_VERSION@
+  torch version: @IJEDI_MPAS_TORCH_VERSION@
+  numpy version: @IJEDI_MPAS_NUMPY_VERSION@
+  netcdf4 version: @IJEDI_MPAS_NETCDF4_VERSION@
+  mpas-pytorch version: @IJEDI_MPAS_PACKAGE_VERSION@
+  mpas-pytorch source commit: @IJEDI_MPAS_SOURCE_COMMIT@
+  torch intraop threads: 1
+  torch interop threads: 1
+  vertical coordinate source: level index
+
+model:
+  name: MPAS-PyTorch
+  time step: PT12M
+  # These are the three tensors present under the same native names both in
+  # the file-loaded pre-initialization state and in every sealed continuation.
+  # Analysis exposes theta_m/rho_zz through typed control views and authenticates
+  # their distinct file-input representations.
+  model variables: [u, w, scalars]
+
+model aux control: {}
+
+initial condition:
+  date: 2026-07-17T06:00:00Z
+  state variables: [u, w, scalars]
+
+output manifest: "@IJEDI_MPAS_OUTPUT@"
+checkpoint path: "@IJEDI_MPAS_CHECKPOINT@"
+execution mode: @IJEDI_MPAS_EXECUTION_MODE@

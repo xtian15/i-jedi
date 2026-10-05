@@ -7,6 +7,8 @@
 #include "oops/test/interface/Geometry.h"
 #include "oops/test/interface/GeometryIterator.h"
 #include "oops/test/interface/Increment.h"
+#include "oops/test/interface/LinearModel.h"
+#include "oops/test/interface/Model.h"
 #include "oops/test/interface/State.h"
 
 // -------------------------------------------------------------------------------------------------
@@ -33,6 +35,14 @@ int runApp(int argc, char **argv, const std::string testName)
   tests["increment"] = []()
   {
     return std::make_unique<test::Increment<ijedi::Traits>>();
+  };
+  tests["model"] = []()
+  {
+    return std::make_unique<test::Model<ijedi::Traits>>();
+  };
+  tests["linearmodel"] = []()
+  {
+    return std::make_unique<test::LinearModel<ijedi::Traits>>();
   };
   tests["geometryiterator"] = []()
   {
@@ -68,6 +78,8 @@ int main(int argc, char **argv)
       "geometryiterator",
       "state",
       "increment",
+      "linearmodel",
+      "model",
   };
   ASSERT_MSG(validtests.find(testApp) != validtests.end(), "Test not recognized: " + testApp);
 

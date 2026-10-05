@@ -4,8 +4,12 @@
 #include <string>
 #include <vector>
 
-#include "mist/base/Increment.h"
+#include "atlas/field.h"
+#include "oops/base/FieldSet3D.h"
+#include "oops/base/LocalIncrement.h"
 #include "oops/util/ObjectCounter.h"
+#include "oops/util/Printable.h"
+#include "oops/util/Duration.h"
 
 #include "oops/base/ParameterTraitsVariables.h"
 #include "oops/util/parameters/OptionalParameter.h"
@@ -30,6 +34,8 @@ namespace util {
 namespace ijedi {
 
   class Geometry;
+  class GeometryIterator;
+  class State;
 
   // -----------------------------------------------------------------------------------------------
 
@@ -66,7 +72,7 @@ namespace ijedi {
 
   // -----------------------------------------------------------------------------------------------
 
-  class Increment : public mist::Increment, private util::ObjectCounter<Increment> {
+  class Increment : public util::Printable, private util::ObjectCounter<Increment> {
    public:
     static std::string classname() { return "ijedi::Increment"; }
 
@@ -77,6 +83,36 @@ namespace ijedi {
 
     Increment & operator=(const Increment &);
 
+    const util::DateTime validTime() const { return fields_.validTime(); }
+    void updateTime(const util::Duration &dt) { fields_.validTime() += dt; }
+    const oops::Variables &variables() const { return fields_.variables(); }
+
+    void diff(const State &, const State &);
+    void zero() { fields_.zero(); }
+    void zero(const util::DateTime &time) { fields_.validTime() = time; fields_.zero(); }
+    void ones();
+    void sqrt() { fields_.sqrt(); }
+    Increment &operator+=(const Increment &);
+    Increment &operator-=(const Increment &);
+    Increment &operator*=(double);
+    void axpy(double, const Increment &, bool checkTimesEqual = true);
+    double dot_product_with(const Increment &) const;
+    void schur_product_with(const Increment &);
+    void random();
+    void accumul(double, const State &);
+    double norm() const { return fields_.norm(fields_.variables()); }
+    bool isMpas() const;
+    oops::LocalIncrement getLocal(const GeometryIterator &) const;
+    void setLocal(const oops::LocalIncrement &, const GeometryIterator &);
+
+    atlas::FieldSet &fieldSet() { return fields_.fieldSet(); }
+    const atlas::FieldSet &fieldSet() const { return fields_.fieldSet(); }
+    void toFieldSet(atlas::FieldSet &) const;
+    void fromFieldSet(const atlas::FieldSet &);
+    size_t serialSize() const { return fields_.serialSize(); }
+    void serialize(std::vector<double> &buffer) const { fields_.serialize(buffer); }
+    void deserialize(const std::vector<double> &, size_t &);
+
     void read(const eckit::Configuration &);
     void write(const eckit::Configuration &) const;
     void dirac(const eckit::Configuration &);
@@ -85,6 +121,7 @@ namespace ijedi {
     void print(std::ostream & os) const override;
 
     const Geometry & geom_;
+    oops::FieldSet3D fields_;
   };
 
 // -----------------------------------------------------------------------------------------------

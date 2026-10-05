@@ -2,6 +2,253 @@
 # -------------------------
 add_subdirectory(mains)
 
+set(IJEDI_MPAS_CASE_DIR "" CACHE PATH
+    "Directory containing the receipt-matching x1.10242 model input triplet")
+set(IJEDI_MPAS_WHEEL "" CACHE FILEPATH "Exact MPAS-PyTorch MPAS integration wheel")
+set(IJEDI_MPAS_PYTHON "" CACHE FILEPATH "Python executable with that wheel installed")
+set(IJEDI_MPAS_DIRECT_ORACLE "" CACHE FILEPATH
+    "Independent direct-Python two-step JSON oracle")
+set(IJEDI_MPAS_RUNTIME_RECEIPT "${PROJECT_SOURCE_DIR}/tools/mpas_runtime/runtime_receipt.json"
+    CACHE FILEPATH "Exact declared MPAS/Python runtime receipt")
+set(IJEDI_MPAS_GEOMETRY_CASES "" CACHE FILEPATH
+    "Three ordered model-owned native geometry cases for required release scaling")
+set(IJEDI_MPAS_GEOMETRY_LOCATIONS "" CACHE PATH
+    "Directory containing the fixed 256 and 10000 target scaling corpora")
+set(IJEDI_MPAS_TEST_SUITE "" CACHE STRING
+    "Mandatory MPAS release registration: empty for legacy use, geometry or analysis for qualification")
+set_property(CACHE IJEDI_MPAS_TEST_SUITE PROPERTY STRINGS "" geometry analysis)
+include(${CMAKE_CURRENT_SOURCE_DIR}/BindMpasInputs.cmake)
+if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
+   IJEDI_MPAS_DIRECT_ORACLE)
+  set(IJEDI_MPAS_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_two_step.json")
+  set(IJEDI_MPAS_CHECKPOINT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_step1_state.bin")
+  set(IJEDI_MPAS_RESTORE_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_fresh_restore.json")
+  set(IJEDI_MPAS_BUNDLE_ATTACK_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_bundle_attack.json")
+  set(IJEDI_MPAS_GENERATION_ZERO_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_generation_zero.json")
+  set(IJEDI_MPAS_DETACHED_CLONE_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_detached_clone.json")
+  set(IJEDI_MPAS_EXECUTION_MODE producer)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml @ONLY)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_BUNDLE_ATTACK_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE bundle-attack)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-bundle-attack.yaml @ONLY)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_GENERATION_ZERO_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE generation-zero)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-generation-zero.yaml @ONLY)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_DETACHED_CLONE_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE detached-clone)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-detached-clone.yaml @ONLY)
+  set(IJEDI_MPAS_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_two_step.json")
+  set(IJEDI_MPAS_EXECUTION_MODE producer)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-restore.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-restore.yaml @ONLY)
+  ecbuild_add_test(TARGET ijedi_mpas_api_contracts
+                   MPI 1
+                   OMP 1
+                   COMMAND ${IJEDI_MPAS_PYTHON}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
+                     --kind geometry-api
+                     --executable $<TARGET_FILE:ijedi_mpas_api_contracts.x>
+                     --traversal-executable $<TARGET_FILE:ijedi_mpas_traversal_costs.x>
+                     --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml
+                     --case ${IJEDI_MPAS_CASE_DIR}
+                     --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
+                     --wheel ${IJEDI_MPAS_WHEEL}
+                     --atlas-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                     --output-directory ${CMAKE_CURRENT_BINARY_DIR}/data_generated/api_contracts)
+  set_tests_properties(ijedi_mpas_api_contracts PROPERTIES RUN_SERIAL TRUE)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_bundle_attack
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-bundle-attack.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_generation_zero
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-generation-zero.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_detached_clone
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-detached-clone.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_two_step
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_vs_direct
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_oops_manifest.py
+                        --oops ${IJEDI_MPAS_OUTPUT}
+                        --direct ${IJEDI_MPAS_DIRECT_ORACLE}
+                   TEST_DEPENDS ijedi_mpas_oops_two_step)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_generation_zero_compare
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_step2_manifest.py
+                        --candidate ${IJEDI_MPAS_GENERATION_ZERO_OUTPUT}
+                        --producer ${IJEDI_MPAS_OUTPUT}
+                   TEST_DEPENDS ijedi_mpas_oops_generation_zero
+                                ijedi_mpas_oops_two_step)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_detached_clone_compare
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_step2_manifest.py
+                        --candidate ${IJEDI_MPAS_DETACHED_CLONE_OUTPUT}
+                        --producer ${IJEDI_MPAS_OUTPUT}
+                   TEST_DEPENDS ijedi_mpas_oops_detached_clone
+                                ijedi_mpas_oops_two_step)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_fresh_restore
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-restore.yaml
+                   TEST_DEPENDS ijedi_mpas_oops_two_step)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_fresh_restore_compare
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_fresh_process_restore.py
+                        --producer ${IJEDI_MPAS_OUTPUT}
+                        --consumer ${IJEDI_MPAS_RESTORE_OUTPUT}
+                   TEST_DEPENDS ijedi_mpas_oops_two_step ijedi_mpas_oops_fresh_restore)
+  ecbuild_add_test(TARGET ijedi_mpas_geometry_contracts
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_geometry_contract.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --direct-manifest ${IJEDI_MPAS_DIRECT_ORACLE}
+                        --output
+                          ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_geometry_contract.json)
+  foreach(_geometry_gate IN ITEMS topology cache-restore negative-controls)
+    if(_geometry_gate STREQUAL "topology")
+      set(_geometry_test ijedi_mpas_atlas_topology)
+    elseif(_geometry_gate STREQUAL "cache-restore")
+      set(_geometry_test ijedi_mpas_atlas_cache_restore)
+    else()
+      set(_geometry_test ijedi_mpas_geometry_negative_controls)
+    endif()
+  ecbuild_add_test(TARGET ${_geometry_test}
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_topology.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                        --gate ${_geometry_gate}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --executable $<TARGET_FILE:ijedi_mpas_atlas_topology.x>
+                        --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/atlas_${_geometry_gate})
+  endforeach()
+  if(IJEDI_MPAS_GEOMETRY_CASES OR IJEDI_MPAS_GEOMETRY_LOCATIONS)
+    if(NOT EXISTS "${IJEDI_MPAS_GEOMETRY_CASES}" OR
+       NOT EXISTS "${IJEDI_MPAS_GEOMETRY_LOCATIONS}/locations_256.json" OR
+       NOT EXISTS "${IJEDI_MPAS_GEOMETRY_LOCATIONS}/locations_10000.json")
+      message(FATAL_ERROR "Native Atlas scaling requires its complete three-case/two-corpus inputs")
+    endif()
+    ecbuild_add_test(TARGET ijedi_mpas_atlas_point_operator
+                     TYPE SCRIPT
+                     COMMAND ${CMAKE_COMMAND}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_point_scaling.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
+                          --wheel-sha256
+                            ${IJEDI_MPAS_WHEEL_SHA256}
+                          --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                          --cases ${IJEDI_MPAS_GEOMETRY_CASES}
+                          --locations ${IJEDI_MPAS_GEOMETRY_LOCATIONS}
+                          --executable $<TARGET_FILE:ijedi_mpas_atlas_point_scaling.x>
+                          --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/atlas_point_scaling)
+    ecbuild_add_test(TARGET ijedi_mpas_atlas_conservative_operator
+                     TYPE SCRIPT
+                     COMMAND ${CMAKE_COMMAND}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_conservative_scaling.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
+                          --wheel-sha256
+                            ${IJEDI_MPAS_WHEEL_SHA256}
+                          --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                          --cases ${IJEDI_MPAS_GEOMETRY_CASES}
+                          --executable $<TARGET_FILE:ijedi_mpas_atlas_topology.x>
+                          --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/atlas_conservative_scaling)
+    set_tests_properties(ijedi_mpas_atlas_point_operator
+                         ijedi_mpas_atlas_conservative_operator PROPERTIES TIMEOUT 14400)
+  endif()
+  ecbuild_add_test(TARGET ijedi_mpas_retired_geometry_absent
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_retired_geometry_absent.py
+                        --source ${PROJECT_SOURCE_DIR}
+                        --python ${IJEDI_MPAS_PYTHON}
+                        --library $<TARGET_FILE:ijedi>)
+  ecbuild_add_test(TARGET ijedi_mpas_serialization_contracts
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_serialization_contract.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --output
+                          ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_serialization_contract.json)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_runtime_identity_attacks
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/attack_mpas_runtime_identity.py
+                        --executable $<TARGET_FILE:ijedi_mpas_oops_step.x>
+                        --config
+                          ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml
+                        --output
+                          ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_runtime_identity_attacks.json)
+else()
+  message(STATUS
+      "MPAS/OOPS real-grid tests disabled: set IJEDI_MPAS_CASE_DIR, "
+      "IJEDI_MPAS_WHEEL, IJEDI_MPAS_PYTHON and IJEDI_MPAS_DIRECT_ORACLE")
+endif()
+
+# Analysis tests require the typed analysis interfaces.
+if(IJEDI_MPAS_TEST_SUITE STREQUAL "analysis")
+  message(FATAL_ERROR "Analysis tests require the analysis interfaces")
+endif()
+ecbuild_add_test(TARGET ijedi_mpas_release_gate_negative_controls
+                 TYPE SCRIPT
+                 COMMAND ${Python3_EXECUTABLE}
+                 ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_release_gate.py)
+ecbuild_add_test(TARGET ijedi_mpas_reference_correction_controls
+                 TYPE SCRIPT
+                 COMMAND ${Python3_EXECUTABLE}
+                 ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_reference_corrections.py)
+
 # Link the directory 'data' to the test directory of the build
 # ------------------------------------------------------------
 file(CREATE_LINK
@@ -25,18 +272,24 @@ file(CREATE_LINK
 # Test data generation
 ecbuild_add_test(TARGET  ijedi_setup_mom6_testdata
                  TYPE    SCRIPT
-                 COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_mom6_testdata.py
-                 ARGS    ${CMAKE_CURRENT_SOURCE_DIR}/data/mom6 ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mom6)
+                 COMMAND ${CMAKE_COMMAND}
+                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_mom6_testdata.py
+                      ${CMAKE_CURRENT_SOURCE_DIR}/data/mom6 ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mom6)
 
 ecbuild_add_test(TARGET  ijedi_setup_obs_testdata
                  TYPE    SCRIPT
-                 COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_obs_testdata.py
-                 ARGS    ${CMAKE_CURRENT_SOURCE_DIR}/data/obs ${CMAKE_CURRENT_BINARY_DIR}/data_generated/obs)
+                 COMMAND ${CMAKE_COMMAND}
+                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_obs_testdata.py
+                      ${CMAKE_CURRENT_SOURCE_DIR}/data/obs ${CMAKE_CURRENT_BINARY_DIR}/data_generated/obs)
 
 ecbuild_add_test(TARGET ijedi_setup_fv3_testdata
                  TYPE SCRIPT
-                 COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_fv3_testdata.py
-                 ARGS    ${CMAKE_CURRENT_BINARY_DIR}/data_generated/fv3)
+                 COMMAND ${CMAKE_COMMAND}
+                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_fv3_testdata.py
+                      ${CMAKE_CURRENT_BINARY_DIR}/data_generated/fv3)
 
 # Geometry tests
 ecbuild_add_test( TARGET  ijedi_geometry_fv3
@@ -122,6 +375,24 @@ ecbuild_add_test( TARGET  ijedi_state_mom6
                   COMMAND $<TARGET_FILE:ijedi_test.x>
                   ARGS    state ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier1_unit_state-mom6.yaml
                   TEST_DEPENDS ijedi_setup_mom6_testdata ijedi_geometry_cache_mom6)
+
+# Persistence model test. This is intentionally data-free: it proves that the
+# native I-JEDI model is factory-registered, preserves a zero state, and advances
+# valid time by exactly the configured number of steps.
+ecbuild_add_test( TARGET  ijedi_model_persistence
+                  MPI     1
+                  OMP     1
+                  COMMAND $<TARGET_FILE:ijedi_test.x>
+                  ARGS    model ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_unit_model-persistence.yaml)
+
+# Identity TL/AD test. The OOPS interface suite checks forward and reverse valid
+# times in addition to linearity and the adjoint dot-product identity.
+ecbuild_add_test( TARGET  ijedi_linearmodel_identity
+                  MPI     1
+                  OMP     1
+                  COMMAND $<TARGET_FILE:ijedi_test.x>
+                  ARGS    linearmodel
+                          ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_unit_linearmodel-identity.yaml)
 
 # H(x) tests
 ecbuild_add_test( TARGET  ijedi_hofx3d_mom6
@@ -256,3 +527,35 @@ ecbuild_add_test( TARGET  ijedi_convertstate_fv3-restart_to_fv3-restart
                   COMMAND $<TARGET_FILE:ijedi.x>
                   ARGS    convertstate ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier1_integration_convertstate-fv3-restart_to_fv3-restart.yaml
                   TEST_DEPENDS ijedi_setup_fv3_testdata)
+
+# Atlas MeshBuilder ownership and physical file addressing must remain distinct.
+foreach(_ranks IN ITEMS 2 6)
+  if(_ranks EQUAL 6)
+    set(_mom6_contract_config tier1_unit_geometry-mom6.yaml)
+  else()
+    set(_mom6_contract_config tier1_integration_diffusion-mom6.yaml)
+  endif()
+  ecbuild_add_test(TARGET ijedi_mesh_builder_mom6_${_ranks}
+    MPI ${_ranks} OMP 1
+    COMMAND $<TARGET_FILE:ijedi_mesh_builder_contract.x>
+    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/testinput/${_mom6_contract_config}
+         ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mom6_contract_${_ranks}.nc
+    TEST_DEPENDS ijedi_setup_mom6_testdata)
+endforeach()
+ecbuild_add_test(TARGET ijedi_mesh_builder_fv3_6
+  MPI 6 OMP 1
+  COMMAND $<TARGET_FILE:ijedi_mesh_builder_contract.x>
+  ARGS ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier1_unit_geometry-fv3.yaml
+       ${CMAKE_CURRENT_BINARY_DIR}/data_generated/fv3_contract_unused.nc)
+ecbuild_add_test(TARGET ijedi_mesh_builder_negative_controls
+  TYPE SCRIPT COMMAND ${Python3_EXECUTABLE}
+  ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mesh_builder_rejections.py
+       --mpi ${MPIEXEC_EXECUTABLE} "--mpi-args=${MPI_ARGS}"
+       --executable $<TARGET_FILE:ijedi_mesh_builder_contract.x>
+       --config ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier1_integration_diffusion-mom6.yaml
+       --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/unused_negative.nc
+  TEST_DEPENDS ijedi_setup_mom6_testdata)
+
+# Apply after all producers and consumers are registered. No test is removed.
+include(${CMAKE_CURRENT_SOURCE_DIR}/ProtectTestSchedule.cmake)
+ijedi_protect_test_schedule()

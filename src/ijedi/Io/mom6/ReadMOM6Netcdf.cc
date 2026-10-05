@@ -55,7 +55,7 @@ void readMOM6Netcdf(const std::vector<std::string> & filepaths,
 
   // --- 1. Gather global indices to root (collective, done once). ---
   auto localGidx = atlas::array::make_view<atlas::gidx_t, 1>(
-      fs.nodes().global_index());
+      fs.nodes().field("mom6_structured_index"));
   atlas::Field gidxField = fs.createField<double>(
       atlas::option::name("__gidx") | atlas::option::levels(1));
   {

@@ -16,37 +16,46 @@
 #include "oops/util/ObjectCounter.h"
 #include "oops/util/Printable.h"
 
-namespace mist {
-class ModelAuxControl;
-class ModelAuxIncrement;
-}  // namespace mist
+#include "ijedi/Increment/Increment.h"
+#include "ijedi/Geometry/Geometry.h"
+
+#include "ijedi/ModelAux/ModelAuxControl.h"
+#include "ijedi/ModelAux/ModelAuxIncrement.h"
 
 namespace ijedi {
 
 class Geometry;
-class Increment;
 class State;
 
 // An identity linear model.
 class LinearModel : public util::Printable, private util::ObjectCounter<LinearModel> {
  public:
-  static const std::string classname() { return "ijedi::Model"; }
-  static std::vector<std::string> names() { return {}; }
+  static const std::string classname() { return "ijedi::LinearModel"; }
+  static std::vector<std::string> names() { return {"I-JEDI identity"}; }
 
-  LinearModel(const Geometry &, const eckit::Configuration & config):
-    tstep_(config.getString("time step")) {}
+  LinearModel(const Geometry &geometry, const eckit::Configuration & config):
+    tstep_(config.getString("time step")) {
+    if (geometry.isMpas()) {
+      throw eckit::BadParameter(
+          "I-JEDI identity is not the tangent-linear or adjoint of MPAS-PyTorch", Here());
+    }
+  }
   ~LinearModel() = default;
 
   /// Model trajectory computation
-  void setTrajectory(const State &, State &, const mist::ModelAuxControl &) {}
+  void setTrajectory(const State &, State &, const ModelAuxControl &) {}
 
 /// Run TLM and its adjoint
   void initializeTL(Increment &) const {}
-  void stepTL(Increment &, const mist::ModelAuxIncrement &) const {}
+  void stepTL(Increment & increment, const ModelAuxIncrement &) const {
+    increment.updateTime(tstep_);
+  }
   void finalizeTL(Increment &) const {}
 
   void initializeAD(Increment &) const {}
-  void stepAD(Increment &, mist::ModelAuxIncrement &) const {}
+  void stepAD(Increment & increment, ModelAuxIncrement &) const {
+    increment.updateTime(-tstep_);
+  }
   void finalizeAD(Increment &) const {}
 
 /// Other utilities

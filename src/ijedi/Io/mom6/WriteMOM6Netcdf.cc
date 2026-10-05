@@ -38,12 +38,13 @@ void writeMOM6Netcdf(const std::string & filepath,
   // the global-index field so we know where each gathered node sits on the
   // full structured grid.
   //
-  // Convention: global_index = jG * ni + iG + 1  (1-based)
+  // mom6_structured_index = jG * ni + iG + 1 (1-based). Atlas global IDs
+  // are dense in the active space and are not structured-file addresses.
 
   // 1a. Build a local field holding each node's global index as double,
   //     then gather it to root.
   auto localGidx = atlas::array::make_view<atlas::gidx_t, 1>(
-      fs.nodes().global_index());
+      fs.nodes().field("mom6_structured_index"));
   atlas::Field gidxField = fs.createField<double>(
       atlas::option::name("__gidx") | atlas::option::levels(1));
   {
@@ -142,8 +143,7 @@ void writeMOM6Netcdf(const std::string & filepath,
       const int nLevels = static_cast<int>(gf.shape(1));
 
       // The gathered field has nActiveGlobal entries (ocean+fringe only).
-      // Use the gathered global_index to place each value on the full grid.
-      //   global_index = jG * ni + iG + 1  →  flatIdx = global_index - 1
+      // Use the independently retained structured index to place each value.
       if (nLevels > 1) {
         std::vector<double> buf(static_cast<size_t>(nz * nj * ni), 0.0);
         for (int n = 0; n < nGlobal; ++n) {

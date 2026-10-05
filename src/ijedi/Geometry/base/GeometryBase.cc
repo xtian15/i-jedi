@@ -23,7 +23,9 @@ namespace ijedi
                                                      eckit::LocalConfiguration &geomVars,
                                                      atlas::FunctionSpace &functionSpace,
                                                      atlas::FieldSet &fieldSet,
-                                                     bool &levelsAreTopDown, int &numLevels)
+                                                     bool &levelsAreTopDown, int &numLevels,
+                                                     std::shared_ptr<MpasBackendContext>
+                                                         &mpasContext)
   {
     // Get the type
     std::string type;
@@ -37,7 +39,7 @@ namespace ijedi
     if (type == "mpas")
     {
       return std::make_shared<GeometryMPAS>(geomConf, comm, geomVars, functionSpace, fieldSet,
-                                            levelsAreTopDown, numLevels);
+                                            levelsAreTopDown, numLevels, mpasContext);
     }
     if (type == "mom6")
     {

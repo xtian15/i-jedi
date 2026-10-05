@@ -10,8 +10,8 @@
 #include <memory>
 #include <ostream>
 
-#include "mist/utils/VaderVariableChange.h"
 #include "oops/util/Printable.h"
+#include "vader/vader.h"
 
 namespace eckit {
 class Configuration;
@@ -38,7 +38,7 @@ class VariableChange : public util::Printable {
  private:
   void print(std::ostream &) const override;
   const Geometry & geom_;
-  std::unique_ptr<mist::VaderVariableChange> varchange_;
+  std::unique_ptr<vader::Vader> varchange_;
 };
 
 }  // namespace ijedi

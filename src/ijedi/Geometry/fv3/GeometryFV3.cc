@@ -17,6 +17,7 @@
 #include "oops/util/Logger.h"
 
 #include "ijedi/Geometry/fv3/GeometryFV3.h"
+#include "ijedi/Geometry/base/AtlasMeshBuilderContract.h"
 #include "ijedi/Geometry/fv3/GeometryFV3.interface.h"
 #include "ijedi/Geometry/fv3/GeometryFV3Parameters.h"
 #include "ijedi/Utilities/Constants.h"
@@ -216,6 +217,7 @@ namespace ijedi
           quad_global_indices,
           atlas_config);
 
+      bindMeshBuilderOwnership(mesh);
       atlas::mesh::actions::build_halo(mesh, 1);
       functionSpace = atlas::functionspace::NodeColumns(mesh, atlas_config);
 
@@ -287,7 +289,7 @@ namespace ijedi
 
     // Reference pressure column for vertical localization, using FV3's own Philips
     // mid-layer convention at psurf = 1e5 to match fv3-jedi's verticalCoord("logp").
-    // mist's generic arithmetic mid-layer instead perturbs GETKF increments by ~0.2%.
+    // A generic arithmetic mid-layer instead perturbs GETKF increments by ~0.2%.
     {
       constexpr double referenceSurfacePressure = 1.0e5;
       std::vector<double> edgePressure(ak.size());
