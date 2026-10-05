@@ -12,25 +12,25 @@ same physical host using an absolute, shared lock inode. Scaling runs exclude
 compilers and other scientific jobs.
 
 Copy `docs/MPAS_INPUTS.cmake.example` to an external `inputs.cmake` and
-set its paths to the acquired input bundle. PR1 omits the two PR2 entries. Input files, model wheels,
+set its paths to the acquired input bundle. The geometry suite omits the two analysis entries. Input files, model wheels,
 SDKs and generated reference results are acquired separately and never committed
 with the contribution. Their exact receipts and checksums must be accessible to
 both the reviewer and CI.
 
 | Variables | Content |
 | --- | --- |
-| `Python3_EXECUTABLE`, `IJEDI_MPAS_P0_PYTHON` | The same locked Python interpreter |
-| `IJEDI_MPAS_P0_WHEEL`, `IJEDI_MPAS_RUNTIME_RECEIPT` | Exact model wheel and runtime identity |
-| `IJEDI_MPAS_P0_CASE_DIR` | Complete model input case |
-| `IJEDI_MPAS_P0_DIRECT_ORACLE` | Independent direct-model two-step oracle |
+| `Python3_EXECUTABLE`, `IJEDI_MPAS_PYTHON` | The same locked Python interpreter |
+| `IJEDI_MPAS_WHEEL`, `IJEDI_MPAS_RUNTIME_RECEIPT` | Exact model wheel and runtime identity |
+| `IJEDI_MPAS_CASE_DIR` | Complete model input case |
+| `IJEDI_MPAS_DIRECT_ORACLE` | Independent direct-model two-step oracle |
 | `IJEDI_MPAS_GEOMETRY_CASES` | Ordered three-case native geometry manifest |
 | `IJEDI_MPAS_GEOMETRY_LOCATIONS` | Fixed 256- and 10000-target corpora |
-| `IJEDI_MPAS_P2_LOCATIONS`, `IJEDI_MPAS_CONTRACT_SOURCE_DIR` | Additional analysis inputs, required by PR2 |
+| `IJEDI_MPAS_ANALYSIS_LOCATIONS`, `IJEDI_MPAS_CONTRACT_SOURCE_DIR` | Additional analysis inputs, required by PR2 |
 | `IJEDI_POCKETFFT_SOURCE_DIR` | Header/license bytes from the dependency artifact manifest, for source-built Atlas |
 
-Generate the direct oracle with `tools/mpas_bridge/direct_two_step.py`; its
+Generate the direct oracle with `test/mpas/direct_two_step.py`; its
 `--help` lists the required input, wheel, timestep and identity arguments. Restore
-the Python runtime using `tools/mpas_bridge/recreate_p0_runtime.sh` with the
+the Python runtime using `tools/mpas_runtime/recreate_runtime.sh` with the
 checksummed wheelhouse. A missing or changed declared input fails configuration.
 Atlas/OOPS source pins in `cmake/MpasDependencyPins.cmake` must resolve to the
 required contributions; substituting another revision cannot qualify the build.
@@ -39,13 +39,13 @@ required contributions; substituting another revision cannot qualify the build.
 
 Commit the exact candidate before qualification. Configure a fresh build as
 shown in the README, then let this wrapper perform the first owned build.
-Use `pr1` for geometry/State and `pr2` for the stacked analysis change.
+Use `geometry` for geometry/State and `analysis` when the analysis interfaces are included.
 
 ```sh
 python3 -B test/tools/test_release_gate.py
-python3 -B tools/qualification/run_p0_p2_release_gate.py \
+python3 -B tools/qualification/run_mpas_tests.py \
   --source "$PWD" --build "$PWD/build" \
-  --manifest "$PWD/docs/P0_P2_REQUIRED_TESTS.json" --stage pr1 \
+  --manifest "$PWD/docs/MPAS_REQUIRED_TESTS.json" --suite geometry \
   --output "$PWD/../qualification" --lock-file "$SHARED_LOCK_FILE" \
   --build-jobs 2 --test-jobs 2
 ```
@@ -60,7 +60,7 @@ owned executable/library hashes and source-bound receipt. Reauthenticate those
 products after any later build or before handing them to another consumer:
 
 ```sh
-python3 -B tools/qualification/run_p0_p2_release_gate.py \
+python3 -B tools/qualification/run_mpas_tests.py \
   --source "$PWD" --build "$PWD/build" \
   --verify-receipt "$PWD/../qualification/qualified.json"
 ```

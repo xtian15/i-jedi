@@ -13,8 +13,8 @@
     "python": "3.11.7", "torch": "2.8.0+cpu", "numpy": "2.0.2",
     "netcdf4": "1.7.4.1", "machine": "aarch64"
   },
-  "scope": "exact_local_candidate_pending_complete_PR_qualification",
-  "requirements": "p0-runtime-linux-aarch64.requirements.txt",
+  "scope": "serial_global_cpu_float64",
+  "requirements": "runtime-linux-aarch64.requirements.txt",
   "requirements_sha256": "a370ed1e8bbb02fbc2ce7faf01737b815d898758172a42e4e9966b6af642f434",
   "sdk_python_provider": {
     "distribution": "bufr-query-sdk", "version": "0.0.4",

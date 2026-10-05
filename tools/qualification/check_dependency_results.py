@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from run_p0_p2_release_gate import check_inventory, check_results
+from run_mpas_tests import check_inventory, check_results
 
 
 def verify_oops_installed_headers(prefix):

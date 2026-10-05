@@ -20,7 +20,7 @@
 #include "eckit/thread/StaticMutex.h"
 #include "pybind11/stl.h"
 
-#include "ijedi/Python/MpasPythonAdapter.h"
+#include "ijedi/Python/MpasWheelIdentity.h"
 #include "ijedi/Python/PythonRuntime.h"
 #include "ijedi/Interpolation/AtlasOperatorReceipt.h"
 #include "oops/base/Variable.h"
@@ -275,7 +275,7 @@ MpasBackendContext::MpasBackendContext(const eckit::Configuration &config)
   const int intraopThreads = config.getInt("torch intraop threads");
   const int interopThreads = config.getInt("torch interop threads");
   if (intraopThreads != 1 || interopThreads != 1) {
-    throw std::runtime_error("P0 dependency graph requires one Torch intraop and interop thread");
+    throw std::runtime_error("MPAS dependency graph requires one Torch intraop and interop thread");
   }
 
   impl_->runtime = acquireRuntime(pythonExecutable);
@@ -351,11 +351,11 @@ MpasBackendContext::MpasBackendContext(const eckit::Configuration &config)
         support["process_model"].cast<py::list>().size() != 1 ||
         support["process_model"].cast<py::list>()[0].cast<std::string>() != "single_process") {
       throw std::runtime_error(
-          "MPAS package capability does not match CPU/float64/single-process P0");
+          "MPAS package capability does not match CPU/float64/single-process MPAS integration");
     }
     if (!impl_->torch.attr("version").attr("cuda").is_none()) {
       throw std::runtime_error(
-          "P0 requires a CPU-only PyTorch runtime (torch.version.cuda != None)");
+          "MPAS integration requires a CPU-only PyTorch runtime (torch.version.cuda != None)");
     }
 
     impl_->config = impl_->mpas.attr("load_config_from_namelist")(namelistPath);

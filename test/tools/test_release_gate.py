@@ -15,7 +15,7 @@ from unittest.mock import patch
 from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC = importlib.util.spec_from_file_location("release_gate", ROOT / "tools/qualification/run_p0_p2_release_gate.py")
+SPEC = importlib.util.spec_from_file_location("release_gate", ROOT / "tools/qualification/run_mpas_tests.py")
 GATE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(GATE)
 SCAN_SPEC = importlib.util.spec_from_file_location(
@@ -23,11 +23,11 @@ SCAN_SPEC = importlib.util.spec_from_file_location(
 SCAN = importlib.util.module_from_spec(SCAN_SPEC)
 SCAN_SPEC.loader.exec_module(SCAN)
 ARTIFACT_SPEC = importlib.util.spec_from_file_location(
-    "runtime_artifacts", ROOT / "tools/mpas_bridge/verify_runtime_artifacts.py")
+    "runtime_artifacts", ROOT / "tools/mpas_runtime/verify_runtime_artifacts.py")
 ARTIFACTS = importlib.util.module_from_spec(ARTIFACT_SPEC)
 ARTIFACT_SPEC.loader.exec_module(ARTIFACTS)
 PROVIDER_SPEC = importlib.util.spec_from_file_location(
-    "sdk_provider", ROOT / "tools/mpas_bridge/package_sdk_bufr_provider.py")
+    "sdk_provider", ROOT / "tools/mpas_runtime/package_sdk_bufr_provider.py")
 PROVIDER = importlib.util.module_from_spec(PROVIDER_SPEC)
 PROVIDER_SPEC.loader.exec_module(PROVIDER)
 sys.path.insert(0, str(ROOT / "tools/qualification"))
@@ -129,13 +129,13 @@ class SDKProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "already exists"):
             PROVIDER.build_provider(self.sdk, output, self.identity)
         self.assertEqual(output.read_bytes(), b"only copy")
-        receipt = json.loads((ROOT / "tools/mpas_bridge/p0_runtime_receipt.json").read_bytes())
+        receipt = json.loads((ROOT / "tools/mpas_runtime/runtime_receipt.json").read_bytes())
         provider = json.loads((ROOT / "cmake/MpasDependencyArtifacts.json").read_bytes())["bufr_sdk_provider"]
         self.assertEqual(receipt["sdk_python_provider"]["wheel_sha256"], provider["wheel_sha256"])
         self.assertEqual(receipt["requirements_sha256"], hashlib.sha256(
-            (ROOT / "tools/mpas_bridge/p0-runtime-linux-aarch64.requirements.txt").read_bytes()).hexdigest())
+            (ROOT / "tools/mpas_runtime/runtime-linux-aarch64.requirements.txt").read_bytes()).hexdigest())
         self.assertEqual(len(ARTIFACTS.read_lock(
-            ROOT / "tools/mpas_bridge/p0-runtime-linux-aarch64.requirements.txt")), 28)
+            ROOT / "tools/mpas_runtime/runtime-linux-aarch64.requirements.txt")), 28)
 
 
 class PocketfftInputTests(unittest.TestCase):
@@ -310,19 +310,19 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertIn("vars.IJEDI_MPAS_QUALIFICATION_IMAGE", workflow)
         self.assertNotIn("make -j", workflow)
         self.assertNotIn("check-container", workflow)
-        self.assertLess(workflow.index("run_p0_p2_release_gate.py"),
+        self.assertLess(workflow.index("run_mpas_tests.py"),
                         workflow.index('cmake --build "$GITHUB_WORKSPACE/Build"'))
         self.assertIn("check_dependency_results.py", workflow)
 
     def test_ci_stage_matches_the_implemented_source_surface(self):
         workflow = (ROOT / ".github/workflows/build.yaml").read_text()
         analysis = (ROOT / "src/ijedi/Increment/MpasIncrementBackend.cc").exists()
-        stage = "pr2" if analysis else "pr1"
-        self.assertIn("-DIJEDI_MPAS_RELEASE_STAGE=" + stage, workflow)
-        self.assertIn("--stage " + stage, workflow)
-        other = "pr1" if analysis else "pr2"
-        self.assertNotIn("-DIJEDI_MPAS_RELEASE_STAGE=" + other, workflow)
-        self.assertNotIn("--stage " + other, workflow)
+        suite = "analysis" if analysis else "geometry"
+        self.assertIn("-DIJEDI_MPAS_TEST_SUITE=" + suite, workflow)
+        self.assertIn("--suite " + suite, workflow)
+        other = "geometry" if analysis else "analysis"
+        self.assertNotIn("-DIJEDI_MPAS_TEST_SUITE=" + other, workflow)
+        self.assertNotIn("--suite " + other, workflow)
         self.assertLess(workflow.index('cmake --build "$GITHUB_WORKSPACE/Build"'),
                         workflow.index("--verify-receipt"))
         self.assertIn("actions/upload-artifact@", workflow)
@@ -336,23 +336,23 @@ class ReleaseGateTests(unittest.TestCase):
         self.addCleanup(self.directory.cleanup)
 
     def test_retained_names_and_added_api_control(self):
-        manifest = json.loads((ROOT/"docs/P0_P2_REQUIRED_TESTS.json").read_text())
-        self.assertEqual(set(manifest["pr1"]), {
+        manifest = json.loads((ROOT/"docs/MPAS_REQUIRED_TESTS.json").read_text())
+        self.assertEqual(set(manifest["geometry"]), {
             "ijedi_mpas_api_contracts", "ijedi_mpas_oops_two_step",
             "ijedi_mpas_atlas_topology", "ijedi_mpas_atlas_point_operator",
             "ijedi_mpas_atlas_conservative_operator", "ijedi_mpas_atlas_cache_restore",
             "ijedi_mpas_geometry_negative_controls", "ijedi_mpas_retired_geometry_absent",
         })
-        self.assertEqual(set(manifest["pr2"]), {
+        self.assertEqual(set(manifest["analysis"]), {
             "ijedi_mpas_variable_schema", "ijedi_mpas_state_atlas_views",
             "ijedi_mpas_increment_algebra", "ijedi_mpas_transforms_nonlinear",
             "ijedi_mpas_transforms_tlad", "ijedi_mpas_oops_getvalues_tlad",
             "ijedi_mpas_control_native_tlad", "ijedi_mpas_variable_negative_controls",
         })
-        self.assertEqual(len(GATE.required_names(manifest, "pr1")), 48)
-        self.assertEqual(len(GATE.required_names(manifest, "pr2")), 56)
-        manifest["pr2"].append(manifest["pr1"][0])
-        with self.assertRaises(RuntimeError): GATE.required_names(manifest, "pr2")
+        self.assertEqual(len(GATE.required_names(manifest, "geometry")), 48)
+        self.assertEqual(len(GATE.required_names(manifest, "analysis")), 56)
+        manifest["analysis"].append(manifest["geometry"][0])
+        with self.assertRaises(RuntimeError): GATE.required_names(manifest, "analysis")
 
     def test_registered_inventory(self):
         self.assertEqual(GATE.check_inventory(self.inventory, {"one"}), {"one", "two"})
@@ -436,7 +436,7 @@ class ReleaseGateTests(unittest.TestCase):
                    "s=importlib.util.spec_from_file_location('gate',sys.argv[1]); "
                    "m=importlib.util.module_from_spec(s); s.loader.exec_module(m); "
                    "m.execution_lock(pathlib.Path(sys.argv[2])).__enter__()",
-                   str(ROOT / "tools/qualification/run_p0_p2_release_gate.py"), str(path)]
+                   str(ROOT / "tools/qualification/run_mpas_tests.py"), str(path)]
         with GATE.execution_lock(path):
             result = subprocess.run(command, text=True, capture_output=True, timeout=10)
             self.assertNotEqual(result.returncode, 0)
@@ -618,15 +618,15 @@ class ReleaseGateTests(unittest.TestCase):
         declared, actual, build, output = (root / name for name in
                                           ("declared", "actual", "build", "output"))
         declared.mkdir(); actual.mkdir()
-        manifest = declared / "docs/P0_P2_REQUIRED_TESTS.json"
+        manifest = declared / "docs/MPAS_REQUIRED_TESTS.json"
         manifest.parent.mkdir()
-        manifest.write_bytes((ROOT / "docs/P0_P2_REQUIRED_TESTS.json").read_bytes())
+        manifest.write_bytes((ROOT / "docs/MPAS_REQUIRED_TESTS.json").read_bytes())
         subprocess.run(["git", "init", "-q", str(declared)], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(declared), "add", "docs"], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(declared), "-c", "user.name=Gate Fixture",
                         "-c", "user.email=fixture@example.invalid", "commit", "-qm", "fixture"],
                        check=True, capture_output=True)
-        names = GATE.required_names(json.loads(manifest.read_text()), "pr2")
+        names = GATE.required_names(json.loads(manifest.read_text()), "analysis")
         (actual / "CMakeLists.txt").write_text(
             "cmake_minimum_required(VERSION 3.23)\nproject(ijedi NONE)\nenable_testing()\n" +
             "\n".join(f'add_test(NAME {name} COMMAND "${{CMAKE_COMMAND}}" -E true)'
@@ -634,7 +634,7 @@ class ReleaseGateTests(unittest.TestCase):
         subprocess.run(["cmake", "-S", str(actual), "-B", str(build)],
                        check=True, capture_output=True, timeout=15)
         args = SimpleNamespace(source=declared, build=build, output=output,
-                               manifest=manifest, stage="pr2", build_jobs=1, test_jobs=1,
+                               manifest=manifest, suite="analysis", build_jobs=1, test_jobs=1,
                                check_inventory_only=False)
         with self.assertRaisesRegex(RuntimeError, "actual I-JEDI source differs"):
             GATE.execute(args)
@@ -693,10 +693,10 @@ class OwnedArtifactTests(unittest.TestCase):
         self.assertEqual(GATE.owned_artifacts(self.build, self.source), seal)
 
     def test_receipt_verifier_rejects_same_path_replacement_and_result_tampering(self):
-        manifest = self.source / "docs/P0_P2_REQUIRED_TESTS.json"
+        manifest = self.source / "docs/MPAS_REQUIRED_TESTS.json"
         manifest.parent.mkdir()
-        manifest.write_text(json.dumps(dict(schema_version=1, pr1=["one"],
-                                            pr2=["future"], retained_non_mpas=["two"])))
+        manifest.write_text(json.dumps(dict(schema_version=1, geometry=["one"],
+                                            analysis=["future"], legacy=["two"])))
         subprocess.run(["git", "init", "-q", str(self.source)], check=True, capture_output=True)
         subprocess.run(["git", "-C", str(self.source), "add", "."], check=True)
         subprocess.run(["git", "-C", str(self.source), "-c", "user.name=Gate Fixture",
@@ -711,7 +711,7 @@ class OwnedArtifactTests(unittest.TestCase):
                         str(evidence / "full.xml")], check=True, capture_output=True, timeout=10)
         artifacts = evidence / "owned-artifacts.json"
         artifacts.write_text(json.dumps(GATE.owned_artifacts(self.build, self.source)))
-        receipt = dict(source_commit=GATE.source_authority(self.source), stage="pr1",
+        receipt = dict(source_commit=GATE.source_authority(self.source), suite="geometry",
                        configured_tests=2, skips=0, required_tests=["one", "two"],
                        source_binding=GATE.build_source_binding(self.build, self.source))
         for path, key in ((manifest, "required_manifest_sha256"),
@@ -787,18 +787,18 @@ class MpasInputBindingTests(unittest.TestCase):
         (self.root / "runtime.json").write_text(json.dumps(self.runtime))
         (self.root / "oracle.json").write_text(json.dumps(self.oracle))
         return subprocess.run(["cmake", "-S", str(self.root), "-B", str(self.root / "build"),
-            "-DIJEDI_MPAS_P0_WHEEL=" + str(self.wheel),
+            "-DIJEDI_MPAS_WHEEL=" + str(self.wheel),
             "-DIJEDI_MPAS_RUNTIME_RECEIPT=" + str(self.root / "runtime.json"),
-            "-DIJEDI_MPAS_P0_DIRECT_ORACLE=" + str(self.root / "oracle.json"),
-            "-DIJEDI_MPAS_P0_CASE_DIR=" + str(self.root),
-            "-DIJEDI_MPAS_P0_PYTHON=/fixture/python", *extra],
+            "-DIJEDI_MPAS_DIRECT_ORACLE=" + str(self.root / "oracle.json"),
+            "-DIJEDI_MPAS_CASE_DIR=" + str(self.root),
+            "-DIJEDI_MPAS_PYTHON=/fixture/python", *extra],
             capture_output=True, text=True, timeout=15)
 
-    def test_partial_p2_inputs_fail_before_generating_unbound_receipts(self):
-        result = self.configure(("-DIJEDI_MPAS_P2_LOCATIONS=/fixture/locations.json",
-                                 "-DIJEDI_MPAS_P0_DIRECT_ORACLE="))
+    def test_partial_analysis_inputs_fail_before_generating_unbound_receipts(self):
+        result = self.configure(("-DIJEDI_MPAS_ANALYSIS_LOCATIONS=/fixture/locations.json",
+                                 "-DIJEDI_MPAS_DIRECT_ORACLE="))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("requires the complete authenticated P0 input graph", result.stderr)
+        self.assertIn("requires the complete authenticated model input graph", result.stderr)
         self.assertFalse((self.root / "build/bound.yaml").exists())
 
     def test_bound_yaml_uses_one_exact_runtime_and_oracle(self):
@@ -819,7 +819,7 @@ class MpasInputBindingTests(unittest.TestCase):
                      "tier0_integration_mpas-typed-interpolation"):
             if name.endswith("typed-interpolation") and not (
                     ROOT / "test/testinput" / (name + ".yaml.in")).is_file():
-                # This P2 surface is deliberately absent on the geometry-only tip.
+                # This analysis surface is deliberately absent on the geometry-only tip.
                 continue
             yaml = (self.root / "build" / (name + ".yaml")).read_text()
             self.assertIn("atlas compiler identity: " + pin, yaml)
@@ -835,13 +835,13 @@ class MpasInputBindingTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("differs from the dependency pin", result.stderr)
 
-    def test_release_stage_requires_real_inputs_before_registering_mpas(self):
-        result = self.configure(("-DIJEDI_MPAS_RELEASE_STAGE=unknown",))
+    def test_suite_requires_real_inputs_before_registering_mpas(self):
+        result = self.configure(("-DIJEDI_MPAS_TEST_SUITE=unknown",))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("release stage must be pr1 or pr2", result.stderr)
-        result = self.configure(("-DIJEDI_MPAS_RELEASE_STAGE=pr1",))
+        self.assertIn("test suite must be geometry or analysis", result.stderr)
+        result = self.configure(("-DIJEDI_MPAS_TEST_SUITE=geometry",))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Mandatory MPAS release input is missing: IJEDI_MPAS_P0_PYTHON",
+        self.assertIn("Mandatory MPAS release input is missing: IJEDI_MPAS_PYTHON",
                       result.stderr)
         self.assertFalse((self.root / "build/bound.yaml").exists())
         python = self.root / "fixture-python"
@@ -850,28 +850,28 @@ class MpasInputBindingTests(unittest.TestCase):
         cases.write_text("{}")
         locations = self.root / "locations"
         locations.mkdir()
-        inputs = ("-DIJEDI_MPAS_P0_PYTHON=" + str(python),
+        inputs = ("-DIJEDI_MPAS_PYTHON=" + str(python),
                   "-DIJEDI_MPAS_GEOMETRY_CASES=" + str(cases),
                   "-DIJEDI_MPAS_GEOMETRY_LOCATIONS=" + str(locations))
         for name in ("locations_256.json", "locations_10000.json"):
-            result = self.configure((*inputs, "-DIJEDI_MPAS_RELEASE_STAGE=pr1"))
+            result = self.configure((*inputs, "-DIJEDI_MPAS_TEST_SUITE=geometry"))
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Mandatory MPAS geometry corpus is missing: " + name,
                           result.stderr)
             (locations / name).write_text("{}")
-        result = self.configure((*inputs, "-DIJEDI_MPAS_RELEASE_STAGE=pr1"))
+        result = self.configure((*inputs, "-DIJEDI_MPAS_TEST_SUITE=geometry"))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        result = self.configure((*inputs, "-DIJEDI_MPAS_RELEASE_STAGE=pr2"))
+        result = self.configure((*inputs, "-DIJEDI_MPAS_TEST_SUITE=analysis"))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Mandatory MPAS P2 input is missing: IJEDI_MPAS_P2_LOCATIONS",
+        self.assertIn("Mandatory MPAS analysis input is missing: IJEDI_MPAS_ANALYSIS_LOCATIONS",
                       result.stderr)
-        result = self.configure((*inputs, "-DIJEDI_MPAS_RELEASE_STAGE=pr2",
-                                "-DIJEDI_MPAS_P2_LOCATIONS=" + str(locations / name)))
+        result = self.configure((*inputs, "-DIJEDI_MPAS_TEST_SUITE=analysis",
+                                "-DIJEDI_MPAS_ANALYSIS_LOCATIONS=" + str(locations / name)))
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Mandatory MPAS P2 input is missing: IJEDI_MPAS_CONTRACT_SOURCE_DIR",
+        self.assertIn("Mandatory MPAS analysis input is missing: IJEDI_MPAS_CONTRACT_SOURCE_DIR",
                       result.stderr)
-        result = self.configure((*inputs, "-DIJEDI_MPAS_RELEASE_STAGE=pr2",
-                                "-DIJEDI_MPAS_P2_LOCATIONS=" + str(locations / name),
+        result = self.configure((*inputs, "-DIJEDI_MPAS_TEST_SUITE=analysis",
+                                "-DIJEDI_MPAS_ANALYSIS_LOCATIONS=" + str(locations / name),
                                 "-DIJEDI_MPAS_CONTRACT_SOURCE_DIR=" + str(self.root)))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

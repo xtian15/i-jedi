@@ -155,7 +155,7 @@ class ApiContracts final : public oops::Application {
       if (target.continuationManifest() != before || target.validTime() != time ||
           std::memcmp(current.array().data(), copied.array().data(),
                       copied.size() * sizeof(double)) != 0) {
-        throw std::runtime_error("RB2 IO rejection changed native authority/time/view bytes");
+        throw std::runtime_error("IO rejection changed native authority/time/view bytes");
       }
       int countChecks = 0;
       for (const auto &names : std::vector<std::vector<std::string>>{
@@ -175,7 +175,7 @@ class ApiContracts final : public oops::Application {
             if (std::memcmp(destination.field(field.name()).array().data(), bytes.array().data(),
                             bytes.size() * sizeof(double)) != 0 ||
                 carrier.continuationManifest() != before || carrier.validTime() != time) {
-              throw std::runtime_error("RB4 failed State export changed authority/output");
+              throw std::runtime_error("failed State export changed authority/output");
             }
             if (levels) field.set_levels(correct);
             else field.set_variables(correct);
@@ -183,7 +183,7 @@ class ApiContracts final : public oops::Application {
           }
         }
       }
-      if (countChecks != 32) throw std::runtime_error("RB4 State count attacks were omitted");
+      if (countChecks != 32) throw std::runtime_error("State count attacks were omitted");
       auto iterator = native.begin();
       auto iteratorCopy = iterator;
       auto mesh = native.mpasAtlasGeometry().dualMesh();
@@ -198,7 +198,7 @@ class ApiContracts final : public oops::Application {
       reject([&] { (void)ijedi::LocalInterpolator::makeTargetPartitioner(native); },
              "geometry storage changed");
       coordinates(0, 0) = longitude;
-      if ((*iterator)[0] != first[0]) throw std::runtime_error("RB3 restored iterator differs");
+      if ((*iterator)[0] != first[0]) throw std::runtime_error("restored iterator differs");
       auto second = iterator;
       ++second;
       const auto secondRow = native.ownedNodeIndices().at(second.nodeIndex());
@@ -221,13 +221,13 @@ class ApiContracts final : public oops::Application {
         const auto point = *it;
         const auto row = native.ownedNodeIndices().at(points++);
         if (point[0] != coordinates(row, 0) || point[1] != coordinates(row, 1)) {
-          throw std::runtime_error("RB3 traversal returned a noncanonical coordinate");
+          throw std::runtime_error("traversal returned a noncanonical coordinate");
         }
       }
       if (points != native.ownedNodeIndices().size()) {
-        throw std::runtime_error("RB3 traversal omitted owned points");
+        throw std::runtime_error("traversal omitted owned points");
       }
-      std::cout << "RB3 authenticated traversal points=" << points << " seconds="
+      std::cout << "authenticated traversal points=" << points << " seconds="
                 << std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()
                 << '\n';
       auto threeDimensional = config.getSubConfiguration("geometry");
@@ -237,11 +237,11 @@ class ApiContracts final : public oops::Application {
       for (auto it = levelsGeometry.begin(); it != levelsGeometry.end(); ++it) {
         const auto point = *it;
         if (point[2] != static_cast<double>(levelPoints % 55)) {
-          throw std::runtime_error("RB3 3D traversal lost canonical level indices");
+          throw std::runtime_error("3D traversal lost canonical level indices");
         }
         ++levelPoints;
       }
-      if (levelPoints != 55 * points) throw std::runtime_error("RB3 3D traversal omitted points");
+      if (levelPoints != 55 * points) throw std::runtime_error("3D traversal omitted points");
     }
     eckit::LocalConfiguration modelConfig;
     modelConfig.set("name", "MPAS-PyTorch");
@@ -344,7 +344,7 @@ class ApiContracts final : public oops::Application {
     if (physical.size() != 1 || physical[0].levels != 56 || physical[0].units != "Pa") {
       throw std::runtime_error("physical pressure must remain available as a typed field");
     }
-    std::cout << "AR1/AR4/RA3 public API contracts pass; two-step model outputs are separately tested\n";
+    std::cout << "Public API contracts pass; two-step model outputs are separately tested\n";
     return 0;
   }
  private:

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "authority": "docs/VALIDATION.md",
-  "pr1": [
+  "geometry": [
     "ijedi_mpas_api_contracts",
     "ijedi_mpas_oops_two_step",
     "ijedi_mpas_atlas_topology",
@@ -11,7 +11,7 @@
     "ijedi_mpas_geometry_negative_controls",
     "ijedi_mpas_retired_geometry_absent"
   ],
-  "pr2": [
+  "analysis": [
     "ijedi_mpas_variable_schema",
     "ijedi_mpas_state_atlas_views",
     "ijedi_mpas_increment_algebra",
@@ -21,7 +21,7 @@
     "ijedi_mpas_control_native_tlad",
     "ijedi_mpas_variable_negative_controls"
   ],
-  "retained_non_mpas": [
+  "legacy": [
     "ijedi_mesh_builder_mom6_2",
     "ijedi_mesh_builder_mom6_6",
     "ijedi_mesh_builder_fv3_6",
