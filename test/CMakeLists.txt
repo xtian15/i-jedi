@@ -311,6 +311,7 @@ if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
                    OMP 1
                    COMMAND ${IJEDI_MPAS_PYTHON}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
+                     --kind variables
                      --executable $<TARGET_FILE:ijedi_mpas_variable_requests.x>
                      --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml
                      --case ${IJEDI_MPAS_CASE_DIR}
