@@ -20,12 +20,23 @@ from direct_two_step import verify_installed_wheel
 from runtime_identity import verify_runtime
 
 
-def main():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser()
     for name in ("configuration", "executable", "case", "runtime-receipt", "wheel",
-                 "atlas-identity", "output-directory", "traversal-executable"):
+                 "atlas-identity", "output-directory"):
         parser.add_argument("--" + name, required=True)
-    args = parser.parse_args()
+    parser.add_argument("--kind", choices=("geometry-api", "variables"), required=True)
+    parser.add_argument("--traversal-executable")
+    args = parser.parse_args(argv)
+    if args.kind == "geometry-api" and not args.traversal_executable:
+        parser.error("geometry-api requires --traversal-executable")
+    if args.kind == "variables" and args.traversal_executable:
+        parser.error("variables does not run the geometry traversal benchmark")
+    return args
+
+
+def main():
+    args = parse_args()
     receipt = json.loads(Path(args.runtime_receipt).read_text())
     verify_installed_wheel(Path(args.wheel), receipt["mpas_pytorch"]["wheel_sha256"])
     verify_runtime(Path(args.runtime_receipt))
@@ -86,6 +97,9 @@ def main():
         for key, value in fixture.items())
     config_path.write_text(text)
     subprocess.run([args.executable, str(config_path)], check=True)
+
+    if args.kind == "variables":
+        return
 
     # Keep the public caller's complete traversal in the same required test.
     # The forced whole-mesh scan must trip the cost bound with identical points.
