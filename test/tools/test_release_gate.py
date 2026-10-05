@@ -34,6 +34,40 @@ sys.path.insert(0, str(ROOT / "tools/qualification"))
 from check_dependency_results import dependency_names, verify_oops_installed_headers
 
 
+class APIWrapperTests(unittest.TestCase):
+    def test_modes_require_their_own_inputs_before_preparing_a_model(self):
+        spec = importlib.util.spec_from_file_location(
+            "api_wrapper", ROOT / "test/tools/run_mpas_api_contracts.py")
+        wrapper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(wrapper)
+        arguments = [item for name in ("configuration", "executable", "case",
+            "runtime-receipt", "wheel", "atlas-identity", "output-directory")
+            for item in ("--" + name, "fixture")]
+        self.assertEqual(wrapper.parse_args(arguments + ["--kind", "variables"]).kind,
+                         "variables")
+        geometry = arguments + ["--kind", "geometry-api"]
+        self.assertEqual(wrapper.parse_args(geometry + ["--traversal-executable",
+                         "traversal"]).traversal_executable, "traversal")
+        from contextlib import redirect_stderr
+        import io
+        for bad in (arguments, geometry, arguments + ["--kind", "variables",
+                    "--traversal-executable", "traversal"]):
+            with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                wrapper.parse_args(bad)
+
+    def test_registered_wrapper_kinds_and_traversal_are_coherent(self):
+        registration = (ROOT / "test/CMakeLists.txt").read_text()
+        api = registration.split("TARGET ijedi_mpas_api_contracts", 1)[1].split(
+            "ecbuild_add_test", 1)[0]
+        self.assertIn("--kind geometry-api", api)
+        self.assertIn("--traversal-executable $<TARGET_FILE:ijedi_mpas_traversal_costs.x>", api)
+        if "TARGET ijedi_mpas_variable_requests" in registration:
+            variables = registration.split("TARGET ijedi_mpas_variable_requests", 1)[1].split(
+                "ecbuild_add_test", 1)[0]
+            self.assertIn("--kind variables", variables)
+            self.assertNotIn("--traversal-executable", variables)
+
+
 class InstalledOOPSHeaderTests(unittest.TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()

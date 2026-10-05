@@ -62,6 +62,7 @@ if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
                    OMP 1
                    COMMAND ${IJEDI_MPAS_PYTHON}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
+                     --kind geometry-api
                      --executable $<TARGET_FILE:ijedi_mpas_api_contracts.x>
                      --traversal-executable $<TARGET_FILE:ijedi_mpas_traversal_costs.x>
                      --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml
