@@ -43,9 +43,9 @@ typed variables: [air_pressure, air_pressure_levels, air_pressure_at_surface,
                   height_above_mean_sea_level,
                   height_above_mean_sea_level_levels,
                   height_above_mean_sea_level_at_surface]
-output values: "@IJEDI_MPAS_P2_OUTPUT@"
-output metrics: "@IJEDI_MPAS_P2_METRICS@"
-atlas cache output: "@IJEDI_MPAS_P2_OUTPUT@.atlas-cache.json"
+output values: "@IJEDI_MPAS_INTERPOLATION_OUTPUT@"
+output metrics: "@IJEDI_MPAS_INTERPOLATION_METRICS@"
+atlas cache output: "@IJEDI_MPAS_INTERPOLATION_OUTPUT@.atlas-cache.json"
 analysis bridge output: "@IJEDI_MPAS_ANALYSIS_OUTPUT@"
 handle probe mode: "@IJEDI_MPAS_HANDLE_PROBE_MODE@"
 state probe mode: "@IJEDI_MPAS_STATE_PROBE_MODE@"

@@ -249,13 +249,13 @@ set(IJEDI_MPAS_CONTRACT_SOURCE_DIR "" CACHE PATH
     "Clean exact MPAS dependency checkout supplying unchanged registry tests only")
 if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
    IJEDI_MPAS_ANALYSIS_LOCATIONS)
-  set(IJEDI_MPAS_P2_OUTPUT
+  set(IJEDI_MPAS_INTERPOLATION_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation.bin")
-  set(IJEDI_MPAS_P2_DIRECT_OUTPUT
+  set(IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_direct.bin")
-  set(IJEDI_MPAS_P2_DIRECT_MANIFEST
+  set(IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_direct.json")
-  set(IJEDI_MPAS_P2_METRICS
+  set(IJEDI_MPAS_INTERPOLATION_METRICS
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_metrics.json")
   set(IJEDI_MPAS_ANALYSIS_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_analysis_bridge.json")
@@ -371,20 +371,20 @@ if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
                         --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
                         --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
                         --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
-                        --atlas-cache ${IJEDI_MPAS_P2_OUTPUT}.atlas-cache.json
-                        --atlas-metrics ${IJEDI_MPAS_P2_METRICS}
+                        --atlas-cache ${IJEDI_MPAS_INTERPOLATION_OUTPUT}.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_INTERPOLATION_METRICS}
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                         --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
-                        --output-values ${IJEDI_MPAS_P2_DIRECT_OUTPUT}
-                        --output-manifest ${IJEDI_MPAS_P2_DIRECT_MANIFEST}
+                        --output-values ${IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT}
+                        --output-manifest ${IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST}
                    TEST_DEPENDS ijedi_mpas_typed_interpolation)
   ecbuild_add_test(TARGET ijedi_mpas_transforms_nonlinear
                    TYPE SCRIPT
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/compare_typed_interpolation.py
-                        --oops ${IJEDI_MPAS_P2_OUTPUT}
-                        --direct ${IJEDI_MPAS_P2_DIRECT_OUTPUT}
-                        --manifest ${IJEDI_MPAS_P2_DIRECT_MANIFEST}
+                        --oops ${IJEDI_MPAS_INTERPOLATION_OUTPUT}
+                        --direct ${IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT}
+                        --manifest ${IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST}
                    TEST_DEPENDS ijedi_mpas_typed_interpolation
                                 ijedi_mpas_typed_interpolation_direct)
   ecbuild_add_test(TARGET ijedi_mpas_typed_oracle_negative_controls
@@ -534,8 +534,8 @@ if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
                         --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
                         --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --wheel ${IJEDI_MPAS_WHEEL}
-                        --atlas-cache ${IJEDI_MPAS_P2_OUTPUT}.atlas-cache.json
-                        --atlas-metrics ${IJEDI_MPAS_P2_METRICS}
+                        --atlas-cache ${IJEDI_MPAS_INTERPOLATION_OUTPUT}.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_INTERPOLATION_METRICS}
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                         --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
                         --state-generation ${_generation}
