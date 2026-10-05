@@ -9,6 +9,10 @@ couples model-owned State storage to nonlinear OOPS steps and authenticated rest
 The stacked analysis change adds typed Increments, native analysis writes and
 spatial nonlinear, tangent-linear and adjoint variable transforms.
 
+Native test clients live in `test/mains`; independent model and Atlas checks live
+in `test/mpas`, with result comparisons in `test/tools`. `tools/mpas_runtime`
+restores and authenticates the locked Python environment.
+
 Read [the interface contract](docs/MPAS_INTERFACE.md) for ownership and supported
 operations, and [validation](docs/VALIDATION.md) for inputs, commands and acceptance.
 
@@ -17,14 +21,14 @@ operations, and [validation](docs/VALIDATION.md) for inputs, commands and accept
 Use an out-of-source CMake build with the pinned dependencies in
 `bundle/CMakeLists.txt` and `cmake/MpasDependencyPins.cmake`. The MPAS runtime is
 Python 3.11 with the exact hash-locked CPU packages and model wheel described in
-`tools/mpas_bridge/p0_runtime_receipt.json`. A complete MPAS build also needs the
+`tools/mpas_runtime/runtime_receipt.json`. A complete MPAS build also needs the
 authenticated input cache described in the validation guide.
 
 ```sh
 cmake -G "Unix Makefiles" -S . -B build -C inputs.cmake \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-ffp-contract=off \
   -DCMAKE_PREFIX_PATH="$DEPENDENCY_PREFIX;$SDK_PREFIX" \
-  -DIJEDI_MPAS_RELEASE_STAGE=pr2 -DBUILD_TESTING=ON
+  -DIJEDI_MPAS_TEST_SUITE=analysis -DBUILD_TESTING=ON
 ```
 
 Run the release wrapper from the validation guide to build and test fresh owned

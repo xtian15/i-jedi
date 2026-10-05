@@ -142,7 +142,7 @@ Json atlasHandleChecks(const ijedi::MpasHorizontalSnapshot &snapshot) {
   attack([&] { connectivity.set(0, 0, connectivity(0, 1)); },
          [&] { connectivity.set(0, 0, originalNode); });
   const int originalMutations = mutations, originalRejections = rejections;
-  // AR3: flags, remote ownership and FE's actual search-radius metadata.
+  // flags, remote ownership and FE's actual search-radius metadata.
   // Exercise all five existing entry points, not just validateStorage.
   for (auto mesh : {geometry.primalMesh(), geometry.dualMesh()}) {
     for (auto field : {mesh.nodes().flags(), mesh.nodes().remote_index(),
@@ -162,10 +162,10 @@ Json atlasHandleChecks(const ijedi::MpasHorizontalSnapshot &snapshot) {
       });
     }
   }
-  const int ar3Mutations = mutations - originalMutations;
-  const int ar3Rejections = rejections - originalRejections;
+  const int handleMutations = mutations - originalMutations;
+  const int handleRejections = rejections - originalRejections;
   completeConnectivityActions = true;
-  // RA2: enumerate all native relation families, including empty layouts.
+  // enumerate all native relation families, including empty layouts.
   for (auto mesh : {geometry.primalMesh(), geometry.dualMesh()}) {
     for (auto *elements : {&mesh.cells(), &mesh.edges()}) {
       for (auto *relation : {&elements->node_connectivity(), &elements->cell_connectivity(),
@@ -240,11 +240,11 @@ Json atlasHandleChecks(const ijedi::MpasHorizontalSnapshot &snapshot) {
       }
     }
   }
-  if (mutations - originalMutations - ar3Mutations != 36 ||
-      rejections - originalRejections - ar3Rejections != 252) {
-    throw std::runtime_error("RA2 native relation or consumer attacks were omitted");
+  if (mutations - originalMutations - handleMutations != 36 ||
+      rejections - originalRejections - handleRejections != 252) {
+    throw std::runtime_error("native relation or consumer attacks were omitted");
   }
-  const int beforeRbMutations = mutations, beforeRbRejections = rejections;
+  const int beforeCompoundMutations = mutations, beforeCompoundRejections = rejections;
   for (auto mesh : {geometry.primalMesh(), geometry.dualMesh()}) {
     auto &nodes = mesh.nodes();
     for (const std::string name : {"lonlat", "xy", "glb_idx", "partition",
@@ -292,10 +292,10 @@ Json atlasHandleChecks(const ijedi::MpasHorizontalSnapshot &snapshot) {
       }
     }
   }
-  const int rbMutations = mutations - beforeRbMutations;
-  const int rbRejections = rejections - beforeRbRejections;
+  const int rbMutations = mutations - beforeCompoundMutations;
+  const int rbRejections = rejections - beforeCompoundRejections;
   if (rbMutations != 112 || rbRejections != 784) {
-    throw std::runtime_error("RB1 shortcut alias attacks were omitted");
+    throw std::runtime_error("shortcut alias attacks were omitted");
   }
   // Fill the explicit cache bound, prove rejection without hidden eviction,
   // and verify the first operator still has exactly its original identity.
@@ -322,11 +322,11 @@ Json atlasHandleChecks(const ijedi::MpasHorizontalSnapshot &snapshot) {
   return {{"probe", probe},
           {"storage_mutations", originalMutations},
           {"rejections", originalRejections},
-          {"ar3_storage_mutations", ar3Mutations},
-          {"ar3_rejections", ar3Rejections},
-          {"ra2_storage_mutations", beforeRbMutations - originalMutations - ar3Mutations},
-          {"ra2_rejections", beforeRbRejections - originalRejections - ar3Rejections},
-          {"rb1_storage_mutations", rbMutations}, {"rb1_rejections", rbRejections},
+          {"geometry_handle_mutations", handleMutations},
+          {"geometry_handle_rejections", handleRejections},
+          {"operator_storage_mutations", beforeCompoundMutations - originalMutations - handleMutations},
+          {"operator_storage_rejections", beforeCompoundRejections - originalRejections - handleRejections},
+          {"compound_storage_mutations", rbMutations}, {"compound_storage_rejections", rbRejections},
           {"cache_capacity", 64},
           {"cache_bound_enforced_without_eviction", bounded},
           {"operator_survives_geometry", true}};

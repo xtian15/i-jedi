@@ -331,7 +331,7 @@ void Increment::accumul(double weight, const State &state) {
 
 oops::LocalIncrement Increment::getLocal(const GeometryIterator &iter) const {
   if (isMpas()) {
-    throw eckit::NotImplemented("MPAS DA-local patch packing is outside serial-global P0-P2",
+    throw eckit::NotImplemented("MPAS DA-local patch packing is outside serial-global MPAS interfaces",
                                 Here());
   }
   std::vector<double> values;
@@ -354,7 +354,7 @@ oops::LocalIncrement Increment::getLocal(const GeometryIterator &iter) const {
 
 void Increment::setLocal(const oops::LocalIncrement &local, const GeometryIterator &iter) {
   if (isMpas()) {
-    throw eckit::NotImplemented("MPAS DA-local patch unpacking is outside serial-global P0-P2",
+    throw eckit::NotImplemented("MPAS DA-local patch unpacking is outside serial-global MPAS interfaces",
                                 Here());
   }
   const std::vector<double> values = local.getVals();

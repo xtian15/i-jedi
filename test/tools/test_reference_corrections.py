@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/mpas_bridge"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "test/mpas"))
 from validate_installed_contract_tests import check_retained_sources
 from composition_fd_controls import TRACER_SCALE, density_scale, retain_progress
 

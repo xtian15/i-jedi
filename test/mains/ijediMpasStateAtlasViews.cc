@@ -124,11 +124,11 @@ class StateAtlasViews final : public oops::Application {
                           std::string::npos;
         }
         require(rejectedCount && state.continuationManifest() == boundary,
-                "RB4 native write count contradiction was accepted or changed authority");
+                "native write count contradiction was accepted or changed authority");
         ++countRejections;
       }
     }
-    require(countRejections == 10, "RB4 native write count attacks were omitted");
+    require(countRejections == 10, "native write count attacks were omitted");
     int rejected = 0;
     const auto reject = [&](const auto &action) {
       const auto before = state.continuationManifest();
@@ -356,7 +356,7 @@ class StateAtlasViews final : public oops::Application {
     std::ofstream output(configuration.getString("analysis bridge output") + ".state-views.json");
     output << Json{{"scope", "real_native_and_GeoVaL_State_views_not_model_time_TLAD"},
                    {"negative_controls_rejected", rejected},
-                   {"rb4_native_count_rejections", countRejections},
+                   {"native_field_count_rejections", countRejections},
                    {"native_fields", 5},
                    {"individual_tracers", 6},
                    {"geoval_fields", 12}}

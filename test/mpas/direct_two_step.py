@@ -14,6 +14,7 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/mpas_runtime"))
 from runtime_identity import verify_runtime
 
 REGRESSION_OUTPUT_TENSOR_KEYS = frozenset(
@@ -151,12 +152,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-tensors", type=Path, required=True)
     parser.add_argument("--container-digest", required=True)
     parser.add_argument("--runtime-receipt", type=Path,
-                        default=Path(__file__).with_name("p0_runtime_receipt.json"))
+                        default=Path(__file__).resolve().parents[2] / "tools/mpas_runtime/runtime_receipt.json")
     parser.add_argument(
         "--legacy-forward-only",
         action="store_true",
         help=(
-            "Run the frozen pre-contract wheel through two complete-state steps. "
+            "Run the declared wheel through two complete-state steps. "
             "This mode is only the immutable forward oracle; it deliberately does "
             "not synthesize geometry, schema, or typed-transform contracts that the "
             "release did not contain."
@@ -185,12 +186,12 @@ def main() -> int:
     runtime_identity = verify_runtime(args.runtime_receipt)
     if torch.version.cuda is not None:
         raise RuntimeError(
-            f"P0 requires CPU-only torch, got CUDA={torch.version.cuda}"
+            f"MPAS integration requires CPU-only torch, got CUDA={torch.version.cuda}"
         )
     torch.set_num_threads(1)
     torch.set_num_interop_threads(1)
     if torch.get_num_threads() != 1 or torch.get_num_interop_threads() != 1:
-        raise RuntimeError("P0 requires one Torch intraop and interop thread")
+        raise RuntimeError("MPAS integration requires one Torch intraop and interop thread")
 
     config = load_config_from_namelist(args.namelist)
     configured_dt = float(config["config_dt"])

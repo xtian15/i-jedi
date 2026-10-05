@@ -493,13 +493,13 @@ void MpasStateBackend::updateTime(const util::Duration &duration) {
 const oops::Variables &MpasStateBackend::variables() const { return variables_; }
 
 void MpasStateBackend::zero() {
-  throw eckit::NotImplemented("MPAS native-state zeroing requires the typed P2 control transform",
+  throw eckit::NotImplemented("MPAS native-state zeroing requires the typed analysis control transform",
                               Here());
 }
 
 void MpasStateBackend::accumul(double, const StateBackend &) {
   throw eckit::NotImplemented(
-      "MPAS native-state accumulation requires the typed P2 control transform", Here());
+      "MPAS native-state accumulation requires the typed analysis control transform", Here());
 }
 
 double MpasStateBackend::norm() const {

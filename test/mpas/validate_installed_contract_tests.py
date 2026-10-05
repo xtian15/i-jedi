@@ -72,7 +72,7 @@ def check_retained_sources(original, retained, hashes, corrections=None):
                 corrections.get("original_source_commit") != retained["source_commit"] or
                 corrections.get("vader_source_commit") != "cb75e639ca09da1b132a777a81f6fe56209f64dd" or
                 set(corrections.get("test_sources", {})) != allowed):
-            raise RuntimeError("reference correction is not the scoped SEM1/VAL1 authority")
+            raise RuntimeError("reference correction is not the scoped humidity semantics and finite-difference authority")
         changes = corrections["test_sources"]
         for name, change in changes.items():
             if (retained["test_sources"].get(name) != change["original_sha256"] or
@@ -141,7 +141,7 @@ def main():
                         help="Clean retained test checkout; separate from the current wheel source")
     parser.add_argument("--collect-only", action="store_true")
     parser.add_argument("--reference-corrections", type=Path,
-                        help="Explicit scoped correction of the demonstrated SEM1/VAL1 reference defects")
+                        help="Explicit scoped correction of the demonstrated humidity semantics and finite-difference reference defects")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.expected_tests != 291:

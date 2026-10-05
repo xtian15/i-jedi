@@ -51,8 +51,8 @@ list(APPEND ijedi_src_files
   # One in-process MPAS-PyTorch bridge
   Python/PythonRuntime.cc
   Python/PythonRuntime.h
-  Python/MpasPythonAdapter.cc
-  Python/MpasPythonAdapter.h
+  Python/MpasWheelIdentity.cc
+  Python/MpasWheelIdentity.h
   Python/MpasBackendContext.cc
   Python/MpasBackendContext.h
 

@@ -128,7 +128,7 @@ State &State::operator+=(const Increment &increment) {
   }
   if (!hasFieldSet()) {
     throw eckit::NotImplemented(
-        "Adding an Increment to MPAS State requires the typed P2 control-to-native map", Here());
+        "Adding an Increment to MPAS State requires the typed analysis control-to-native map", Here());
   }
   if (increment.fieldSet().empty()) {
     throw eckit::BadParameter("Cannot add an empty Increment to State", Here());

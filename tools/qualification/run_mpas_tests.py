@@ -16,12 +16,12 @@ import subprocess
 import xml.etree.ElementTree as ET
 
 
-def required_names(manifest, stage):
-    if manifest.get("schema_version") != 1 or stage not in ("pr1", "pr2"):
-        raise RuntimeError("unsupported required-name manifest/stage")
-    groups = [manifest["pr1"], manifest["retained_non_mpas"]]
-    if stage == "pr2":
-        groups.append(manifest["pr2"])
+def required_names(manifest, suite):
+    if manifest.get("schema_version") != 1 or suite not in ("geometry", "analysis"):
+        raise RuntimeError("unsupported required-name manifest/suite")
+    groups = [manifest["geometry"], manifest["legacy"]]
+    if suite == "analysis":
+        groups.append(manifest["analysis"])
     names = [name for group in groups for name in group]
     if not names or len(set(names)) != len(names) or any(not isinstance(x, str) or not x for x in names):
         raise RuntimeError("required-name manifest is empty or ambiguous")
@@ -204,10 +204,10 @@ def verify_qualification_receipt(receipt_path, source, build):
                       ("owned-artifacts.json", "owned_artifacts_sha256")):
         if hashlib.sha256((evidence / name).read_bytes()).hexdigest() != receipt[key]:
             raise RuntimeError("qualification evidence differs: " + name)
-    manifest = source / "docs/P0_P2_REQUIRED_TESTS.json"
+    manifest = source / "docs/MPAS_REQUIRED_TESTS.json"
     if hashlib.sha256(manifest.read_bytes()).hexdigest() != receipt["required_manifest_sha256"]:
         raise RuntimeError("qualification required manifest differs")
-    required = required_names(json.loads(manifest.read_bytes()), receipt["stage"])
+    required = required_names(json.loads(manifest.read_bytes()), receipt["suite"])
     configured = check_inventory(json.loads((evidence / "inventory.json").read_bytes()), required)
     if (check_results(evidence / "full.xml", configured) != receipt["configured_tests"] or
             sorted(required) != receipt["required_tests"] or receipt["skips"] != 0):
@@ -314,7 +314,7 @@ def execute(args):
     if args.output.exists():
         raise RuntimeError("release evidence directory already exists; use a fresh path")
     manifest_bytes = args.manifest.read_bytes()
-    required = required_names(json.loads(manifest_bytes), args.stage)
+    required = required_names(json.loads(manifest_bytes), args.suite)
     command = ["ctest", "--test-dir", str(args.build)]
     inventory = json.loads(subprocess.check_output(command+["--show-only=json-v1"], text=True))
     configured = check_inventory(inventory, required)
@@ -331,7 +331,7 @@ def execute(args):
         return
     revision = source_authority(args.source)
     if args.manifest.resolve(strict=True) != (
-            args.source / "docs/P0_P2_REQUIRED_TESTS.json").resolve(strict=True):
+            args.source / "docs/MPAS_REQUIRED_TESTS.json").resolve(strict=True):
         raise RuntimeError("required manifest does not belong to the declared source")
     binding = build_source_binding(args.build, args.source)
     subprocess.run(["git", "-C", str(args.source), "diff", "--check"], check=True)
@@ -361,7 +361,7 @@ def execute(args):
     artifact_path = args.output / "owned-artifacts.json"
     artifact_path.write_text(json.dumps(runtime_artifacts, indent=2) + "\n")
     (args.output/"qualified.json").write_text(json.dumps(dict(
-        source_commit=revision, stage=args.stage, configured_tests=count, skips=0,
+        source_commit=revision, suite=args.suite, configured_tests=count, skips=0,
         source_binding=binding,
         owned_artifacts_sha256=hashlib.sha256(artifact_path.read_bytes()).hexdigest(),
         execution_lock_path=str(args.lock_file),
@@ -378,7 +378,7 @@ def main():
     parser = argparse.ArgumentParser()
     for name in ("build", "source", "manifest", "output"):
         parser.add_argument("--"+name, type=Path, required=name in ("build", "source"))
-    parser.add_argument("--stage", choices=("pr1", "pr2"))
+    parser.add_argument("--suite", choices=("geometry", "analysis"))
     parser.add_argument("--verify-receipt", type=Path)
     parser.add_argument("--check-inventory-only", action="store_true")
     parser.add_argument("--build-jobs", type=job_count, default=2)
@@ -390,8 +390,8 @@ def main():
         verify_qualification_receipt(args.verify_receipt, args.source, args.build)
         print("Qualified source, results and owned runtime artifacts authenticate")
         return
-    if any(getattr(args, name) is None for name in ("manifest", "output", "stage", "lock_file")):
-        parser.error("qualification requires --manifest, --output, --stage and --lock-file")
+    if any(getattr(args, name) is None for name in ("manifest", "output", "suite", "lock_file")):
+        parser.error("qualification requires --manifest, --output, --suite and --lock-file")
     # Nonblocking machine-wide exclusion: no competing release run waits for
     # hours or modifies either build tree. Never unlink a live lock inode.
     # A different TMPDIR must not create another lock namespace on this host.

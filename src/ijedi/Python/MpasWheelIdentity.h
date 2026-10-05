@@ -17,19 +17,4 @@ namespace ijedi {
 void verifyInstalledMpasWheel(const PythonRuntime &, const std::string &wheelPath,
                               const std::string &expectedWheelSha256);
 
-class MpasPythonAdapter {
- public:
-  explicit MpasPythonAdapter(const PythonRuntime &);
-
-  std::string runTwoStepAudit(const std::string &wheelPath,
-                              const std::string &expectedWheelSha256,
-                              const std::string &initPath,
-                              const std::string &gridPath,
-                              const std::string &namelistPath,
-                              double timeStepSeconds) const;
-
- private:
-  const PythonRuntime &runtime_;
-};
-
 }  // namespace ijedi

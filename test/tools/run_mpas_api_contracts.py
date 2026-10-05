@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools/mpas_bridge"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "test/mpas"))
 from direct_two_step import verify_installed_wheel
 from runtime_identity import verify_runtime
 

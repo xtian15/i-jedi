@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-values", type=Path, required=True)
     parser.add_argument("--output-manifest", type=Path, required=True)
     parser.add_argument("--runtime-receipt", type=Path,
-                        default=Path(__file__).with_name("p0_runtime_receipt.json"))
+                        default=Path(__file__).resolve().parents[2] / "tools/mpas_runtime/runtime_receipt.json")
     return parser.parse_args()
 
 
@@ -130,7 +130,7 @@ def load_atlas_cache(args, geometry, latitudes, longitudes):
             metrics["atlas_compiler_identity"] != args.atlas_compiler_identity):
         raise RuntimeError("Atlas cache/compiler dimensions do not match the owned inputs")
     # Independently bind the actual native-order model measures. Point targets
-    # use the identity metric; observational R weighting is outside P0-P2.
+    # use the identity metric; observational R weighting is outside the supported interfaces.
     metric = bytearray()
     for value in ("mpas-native-cell-area-per-index-level-v1", geometry.horizontal_receipt):
         value = value.encode()

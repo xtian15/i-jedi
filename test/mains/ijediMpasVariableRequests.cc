@@ -200,7 +200,7 @@ class VariableRequests final : public oops::Application {
                       "Atlas level/component count");
           rejectedFor([&] { interpolator.applyAD(allAliases, aliasCarrier, {active}, countSentinel); },
                       "Atlas level/component count");
-          require(sameBytes(output, countSentinel), "RB4 rejected TL count changed output");
+          require(sameBytes(output, countSentinel), "rejected TL count changed output");
           countAttacks += 2;
         }
         auto output = countSentinel;
@@ -208,13 +208,13 @@ class VariableRequests final : public oops::Application {
                     "Atlas level/component count");
         rejectedFor([&] { noTargets.applyAD(allAliases, aliasCarrier, {}, {}); },
                     "Atlas level/component count");
-        require(sameBytes(output, countSentinel), "RB4 empty count attack changed output");
+        require(sameBytes(output, countSentinel), "empty count attack changed output");
         countAttacks += 2;
         if (levels) field.set_levels(original);
         else field.set_variables(original);
       }
     }
-    require(countAttacks == 144, "RB4 TL/AD count attacks were omitted");
+    require(countAttacks == 144, "TL/AD count attacks were omitted");
     int nameAttacks = 0;
     std::vector<double> aliasBefore;
     aliasCarrier.serialize(aliasBefore);
@@ -233,7 +233,7 @@ class VariableRequests final : public oops::Application {
                       "MPAS Increment field name changed");
           rejectedFor([&] { interpolator.applyAD(allAliases, aliasCarrier, {active}, countSentinel); },
                       "MPAS Increment field name changed");
-          require(sameBytes(output, countSentinel), "RB4 rejected TL name changed output");
+          require(sameBytes(output, countSentinel), "rejected TL name changed output");
           nameAttacks += 2;
         }
         auto output = countSentinel;
@@ -241,17 +241,17 @@ class VariableRequests final : public oops::Application {
                     "MPAS Increment field name changed");
         rejectedFor([&] { noTargets.applyAD(allAliases, aliasCarrier, {}, {}); },
                     "MPAS Increment field name changed");
-        require(sameBytes(output, countSentinel), "RB4 empty name attack changed output");
+        require(sameBytes(output, countSentinel), "empty name attack changed output");
         nameAttacks += 2;
         if (replace) aliasFields[index] = canonical;
         else changed.metadata().set("name", name);
         std::vector<double> after;
         aliasCarrier.serialize(after);
-        require(sameBytes(after, aliasBefore), "RB4 rejected names changed carrier bytes");
+        require(sameBytes(after, aliasBefore), "rejected names changed carrier bytes");
       }
     }
-    require(nameAttacks == 144, "RB4 TL/AD actual-name attacks were omitted");
-    std::cout << "RB4: " << nameAttacks << " actual-name TL/AD rejections pass\n";
+    require(nameAttacks == 144, "TL/AD actual-name attacks were omitted");
+    std::cout << "" << nameAttacks << " actual-name TL/AD rejections pass\n";
     std::vector<double> aliasNl, aliasTl;
     interpolator.apply(allAliases, state, {true}, aliasNl);
     interpolator.apply(allAliases, aliasCarrier, {true}, aliasTl);
@@ -317,7 +317,7 @@ class VariableRequests final : public oops::Application {
         ++windCases;
       }
     }
-    // RA5: only exact ordered typed identity is an MPAS inverse. Every entry
+    // only exact ordered typed identity is an MPAS inverse. Every entry
     // point has the same trajectory/time/schema preflight; rectangular maps reject.
     size_t inverseControls = 0;
     for (bool adjoint : {false, true}) {
@@ -383,10 +383,10 @@ class VariableRequests final : public oops::Application {
     }
     require(attacks == 240 && inverseMetadataAttacks == 30 && windCases == 12 && inverseControls == 26,
             "required old/new variable attacks were omitted");
-    std::cout << "RA1/RA5: " << rejectedNames << " descriptor IDs reject consistently; "
+    std::cout << "" << rejectedNames << " descriptor IDs reject consistently; "
               << aliases.size() << " public names; " << windCases << " wind replay cases; "
               << inverseMetadataAttacks << " inverse metadata and " << inverseControls << " inverse controls pass\n";
-    std::cout << "AR2: " << attacks << " public-ingress rejections; exact positive sampling passed\n";
+    std::cout << "" << attacks << " public-ingress rejections; exact positive sampling passed\n";
     return 0;
   }
  private:

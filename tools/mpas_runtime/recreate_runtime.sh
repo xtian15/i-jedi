@@ -10,8 +10,8 @@ target_venv=$1
 wheelhouse=$2
 script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 base_python=$3
-requirements=${4:-$script_dir/p0-runtime-linux-aarch64.requirements.txt}
-receipt=${5:-$script_dir/p0_runtime_receipt.json}
+requirements=${4:-$script_dir/runtime-linux-aarch64.requirements.txt}
+receipt=${5:-$script_dir/runtime_receipt.json}
 export PYTHONDONTWRITEBYTECODE=1
 unset PYTHONPATH BASH_ENV
 
@@ -53,6 +53,7 @@ import json
 from pathlib import Path
 import sys
 sys.path.append(sys.argv[3])
+sys.path.append(str(Path(sys.argv[3]).parents[1] / "test/mpas"))
 from runtime_identity import verify_runtime
 from direct_two_step import verify_installed_wheel
 receipt_path, wheelhouse = map(Path, sys.argv[1:3])

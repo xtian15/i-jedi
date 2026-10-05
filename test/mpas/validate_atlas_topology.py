@@ -73,14 +73,14 @@ def main():
         checks = report["atlas_handle_checks"]
         if (report["atlas_compiler_identity"] != args.atlas_compiler_identity or
                 checks["storage_mutations"] != 13 or checks["rejections"] != 65 or
-                checks["ar3_storage_mutations"] != 14 or checks["ar3_rejections"] != 70 or
-                checks["ra2_storage_mutations"] != 36 or checks["ra2_rejections"] != 252 or
+                checks["geometry_handle_mutations"] != 14 or checks["geometry_handle_rejections"] != 70 or
+                checks["operator_storage_mutations"] != 36 or checks["operator_storage_rejections"] != 252 or
                 checks["cache_capacity"] != 64 or
                 checks["cache_bound_enforced_without_eviction"] is not True or
                 checks["operator_survives_geometry"] is not True):
             raise RuntimeError("geometry negative controls lack the protected inventory/authority")
         verify_installed_wheel(args.wheel.resolve(), args.wheel_sha256)
-        print("65 retained + 70 AR3 + 252 RA2 storage/action attacks rejected; "
+        print("65 retained + 70 + 252 storage/action attacks rejected; "
               "bounded cache and detached lifetime passed")
         return
     subprocess.run([str(args.executable), str(source), str(destination)], check=True)

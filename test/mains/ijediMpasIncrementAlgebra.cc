@@ -160,12 +160,12 @@ class IncrementAlgebra final : public oops::Application {
                          std::string::npos;
             }
             require(rejected && fieldSetManifest(exported) == destinationBefore,
-                    "RB4 count contradiction was accepted or export changed destination");
+                    "count contradiction was accepted or export changed destination");
             ++countControls;
           }
           if (levelCount) field.set_levels(label);
           else field.set_variables(label);
-          require(manifest(x.analysisArrays()) == before, "RB4 count rejection changed values");
+          require(manifest(x.analysisArrays()) == before, "count rejection changed values");
         }
       }
       // Atlas permits edits to the public name metadata and replacement of a
@@ -194,13 +194,13 @@ class IncrementAlgebra final : public oops::Application {
             require(rejected && fieldSetManifest(exported) == nameDestinationBefore &&
                         fieldSetManifest(importReceiver.fieldSet()) == importBefore &&
                         x.validTime() == time && importReceiver.validTime() == time,
-                    "RB4 actual-name contradiction was accepted or changed outputs/receiver/time");
+                    "actual-name contradiction was accepted or changed outputs/receiver/time");
             ++nameControls;
           }
           if (replace) authority[index] = canonical;
           else changed.metadata().set("name", name);
           require(manifest(x.analysisArrays()) == before,
-                  "RB4 actual-name rejection changed authoritative values");
+                  "actual-name rejection changed authoritative values");
         }
       }
       x.toFieldSet(sourceAlias);
@@ -449,11 +449,11 @@ class IncrementAlgebra final : public oops::Application {
     ++negativeControls;
     output["negative_controls_rejected"] = negativeControls;
     require(negativeControls == 74, "typed algebra omitted required negative controls");
-    output["ra4_export_controls"] = exportControls;
-    output["rb4_count_controls"] = countControls;
-    output["rb4_name_controls"] = nameControls;
-    require(nameControls == 184, "RB4 actual-name/map or replacement attacks were omitted");
-    require(countControls == 138, "RB4 omitted a layer/interface/surface/tracer count attack");
+    output["export_preservation_controls"] = exportControls;
+    output["field_count_controls"] = countControls;
+    output["field_name_controls"] = nameControls;
+    require(nameControls == 184, "actual-name/map or replacement attacks were omitted");
+    require(countControls == 138, "omitted a layer/interface/surface/tracer count attack");
     require(exportControls == 21, "export atomicity controls were omitted");
     std::ofstream file(configuration.getString("analysis bridge output") + ".increment.json");
     file << output.dump(2) << '\n';

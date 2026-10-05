@@ -2,72 +2,72 @@
 # -------------------------
 add_subdirectory(mains)
 
-set(IJEDI_MPAS_P0_CASE_DIR "" CACHE PATH
-    "Directory containing the receipt-matching x1.10242 P0 input triplet")
-set(IJEDI_MPAS_P0_WHEEL "" CACHE FILEPATH "Exact MPAS-PyTorch P0 wheel")
-set(IJEDI_MPAS_P0_PYTHON "" CACHE FILEPATH "Python executable with that wheel installed")
-set(IJEDI_MPAS_P0_DIRECT_ORACLE "" CACHE FILEPATH
+set(IJEDI_MPAS_CASE_DIR "" CACHE PATH
+    "Directory containing the receipt-matching x1.10242 model input triplet")
+set(IJEDI_MPAS_WHEEL "" CACHE FILEPATH "Exact MPAS-PyTorch MPAS integration wheel")
+set(IJEDI_MPAS_PYTHON "" CACHE FILEPATH "Python executable with that wheel installed")
+set(IJEDI_MPAS_DIRECT_ORACLE "" CACHE FILEPATH
     "Independent direct-Python two-step JSON oracle")
-set(IJEDI_MPAS_RUNTIME_RECEIPT "${PROJECT_SOURCE_DIR}/tools/mpas_bridge/p0_runtime_receipt.json"
+set(IJEDI_MPAS_RUNTIME_RECEIPT "${PROJECT_SOURCE_DIR}/tools/mpas_runtime/runtime_receipt.json"
     CACHE FILEPATH "Exact declared MPAS/Python runtime receipt")
 set(IJEDI_MPAS_GEOMETRY_CASES "" CACHE FILEPATH
     "Three ordered model-owned native geometry cases for required release scaling")
 set(IJEDI_MPAS_GEOMETRY_LOCATIONS "" CACHE PATH
     "Directory containing the fixed 256 and 10000 target scaling corpora")
-set(IJEDI_MPAS_RELEASE_STAGE "" CACHE STRING
-    "Mandatory MPAS release registration: empty for legacy use, pr1 or pr2 for qualification")
-set_property(CACHE IJEDI_MPAS_RELEASE_STAGE PROPERTY STRINGS "" pr1 pr2)
+set(IJEDI_MPAS_TEST_SUITE "" CACHE STRING
+    "Mandatory MPAS release registration: empty for legacy use, geometry or analysis for qualification")
+set_property(CACHE IJEDI_MPAS_TEST_SUITE PROPERTY STRINGS "" geometry analysis)
 include(${CMAKE_CURRENT_SOURCE_DIR}/BindMpasInputs.cmake)
-if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
-   IJEDI_MPAS_P0_DIRECT_ORACLE)
-  set(IJEDI_MPAS_P0_OUTPUT
+if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
+   IJEDI_MPAS_DIRECT_ORACLE)
+  set(IJEDI_MPAS_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_two_step.json")
-  set(IJEDI_MPAS_P0_CHECKPOINT
+  set(IJEDI_MPAS_CHECKPOINT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_step1_state.bin")
-  set(IJEDI_MPAS_P0_RESTORE_OUTPUT
+  set(IJEDI_MPAS_RESTORE_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_fresh_restore.json")
-  set(IJEDI_MPAS_P0_BUNDLE_ATTACK_OUTPUT
+  set(IJEDI_MPAS_BUNDLE_ATTACK_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_bundle_attack.json")
-  set(IJEDI_MPAS_P0_GENERATION_ZERO_OUTPUT
+  set(IJEDI_MPAS_GENERATION_ZERO_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_generation_zero.json")
-  set(IJEDI_MPAS_P0_DETACHED_CLONE_OUTPUT
+  set(IJEDI_MPAS_DETACHED_CLONE_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_detached_clone.json")
-  set(IJEDI_MPAS_P0_EXECUTION_MODE producer)
+  set(IJEDI_MPAS_EXECUTION_MODE producer)
   configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
       ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml @ONLY)
-  set(IJEDI_MPAS_P0_OUTPUT ${IJEDI_MPAS_P0_BUNDLE_ATTACK_OUTPUT})
-  set(IJEDI_MPAS_P0_EXECUTION_MODE bundle-attack)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_BUNDLE_ATTACK_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE bundle-attack)
   configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
       ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-bundle-attack.yaml @ONLY)
-  set(IJEDI_MPAS_P0_OUTPUT ${IJEDI_MPAS_P0_GENERATION_ZERO_OUTPUT})
-  set(IJEDI_MPAS_P0_EXECUTION_MODE generation-zero)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_GENERATION_ZERO_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE generation-zero)
   configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
       ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-generation-zero.yaml @ONLY)
-  set(IJEDI_MPAS_P0_OUTPUT ${IJEDI_MPAS_P0_DETACHED_CLONE_OUTPUT})
-  set(IJEDI_MPAS_P0_EXECUTION_MODE detached-clone)
+  set(IJEDI_MPAS_OUTPUT ${IJEDI_MPAS_DETACHED_CLONE_OUTPUT})
+  set(IJEDI_MPAS_EXECUTION_MODE detached-clone)
   configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-step.yaml.in
       ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-detached-clone.yaml @ONLY)
-  set(IJEDI_MPAS_P0_OUTPUT
+  set(IJEDI_MPAS_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_oops_two_step.json")
-  set(IJEDI_MPAS_P0_EXECUTION_MODE producer)
+  set(IJEDI_MPAS_EXECUTION_MODE producer)
   configure_file(
       ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-oops-restore.yaml.in
       ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-restore.yaml @ONLY)
   ecbuild_add_test(TARGET ijedi_mpas_api_contracts
                    MPI 1
                    OMP 1
-                   COMMAND ${IJEDI_MPAS_P0_PYTHON}
+                   COMMAND ${IJEDI_MPAS_PYTHON}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
                      --executable $<TARGET_FILE:ijedi_mpas_api_contracts.x>
                      --traversal-executable $<TARGET_FILE:ijedi_mpas_traversal_costs.x>
                      --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-oops-step.yaml
-                     --case ${IJEDI_MPAS_P0_CASE_DIR}
+                     --case ${IJEDI_MPAS_CASE_DIR}
                      --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
-                     --wheel ${IJEDI_MPAS_P0_WHEEL}
+                     --wheel ${IJEDI_MPAS_WHEEL}
                      --atlas-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                      --output-directory ${CMAKE_CURRENT_BINARY_DIR}/data_generated/api_contracts)
   set_tests_properties(ijedi_mpas_api_contracts PROPERTIES RUN_SERIAL TRUE)
@@ -95,23 +95,23 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
                    TYPE SCRIPT
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_oops_manifest.py
-                        --oops ${IJEDI_MPAS_P0_OUTPUT}
-                        --direct ${IJEDI_MPAS_P0_DIRECT_ORACLE}
+                        --oops ${IJEDI_MPAS_OUTPUT}
+                        --direct ${IJEDI_MPAS_DIRECT_ORACLE}
                    TEST_DEPENDS ijedi_mpas_oops_two_step)
   ecbuild_add_test(TARGET ijedi_mpas_oops_generation_zero_compare
                    TYPE SCRIPT
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_step2_manifest.py
-                        --candidate ${IJEDI_MPAS_P0_GENERATION_ZERO_OUTPUT}
-                        --producer ${IJEDI_MPAS_P0_OUTPUT}
+                        --candidate ${IJEDI_MPAS_GENERATION_ZERO_OUTPUT}
+                        --producer ${IJEDI_MPAS_OUTPUT}
                    TEST_DEPENDS ijedi_mpas_oops_generation_zero
                                 ijedi_mpas_oops_two_step)
   ecbuild_add_test(TARGET ijedi_mpas_oops_detached_clone_compare
                    TYPE SCRIPT
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_mpas_step2_manifest.py
-                        --candidate ${IJEDI_MPAS_P0_DETACHED_CLONE_OUTPUT}
-                        --producer ${IJEDI_MPAS_P0_OUTPUT}
+                        --candidate ${IJEDI_MPAS_DETACHED_CLONE_OUTPUT}
+                        --producer ${IJEDI_MPAS_OUTPUT}
                    TEST_DEPENDS ijedi_mpas_oops_detached_clone
                                 ijedi_mpas_oops_two_step)
   ecbuild_add_test(TARGET ijedi_mpas_oops_fresh_restore
@@ -124,21 +124,21 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
                    TYPE SCRIPT
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_fresh_process_restore.py
-                        --producer ${IJEDI_MPAS_P0_OUTPUT}
-                        --consumer ${IJEDI_MPAS_P0_RESTORE_OUTPUT}
+                        --producer ${IJEDI_MPAS_OUTPUT}
+                        --consumer ${IJEDI_MPAS_RESTORE_OUTPUT}
                    TEST_DEPENDS ijedi_mpas_oops_two_step ijedi_mpas_oops_fresh_restore)
   ecbuild_add_test(TARGET ijedi_mpas_geometry_contracts
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_geometry_contract.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_geometry_contract.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
-                        --direct-manifest ${IJEDI_MPAS_P0_DIRECT_ORACLE}
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --direct-manifest ${IJEDI_MPAS_DIRECT_ORACLE}
                         --output
                           ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_geometry_contract.json)
   foreach(_geometry_gate IN ITEMS topology cache-restore negative-controls)
@@ -152,16 +152,16 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ${_geometry_test}
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_atlas_topology.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_topology.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
+                          ${IJEDI_MPAS_WHEEL_SHA256}
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                         --gate ${_geometry_gate}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --executable $<TARGET_FILE:ijedi_mpas_atlas_topology.x>
                         --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/atlas_${_geometry_gate})
   endforeach()
@@ -174,11 +174,11 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
     ecbuild_add_test(TARGET ijedi_mpas_atlas_point_operator
                      TYPE SCRIPT
                      COMMAND ${CMAKE_COMMAND}
-                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                          ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_atlas_point_scaling.py
-                          --wheel ${IJEDI_MPAS_P0_WHEEL}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_point_scaling.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
                           --wheel-sha256
-                            ${IJEDI_MPAS_P0_WHEEL_SHA256}
+                            ${IJEDI_MPAS_WHEEL_SHA256}
                           --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                           --cases ${IJEDI_MPAS_GEOMETRY_CASES}
                           --locations ${IJEDI_MPAS_GEOMETRY_LOCATIONS}
@@ -187,11 +187,11 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
     ecbuild_add_test(TARGET ijedi_mpas_atlas_conservative_operator
                      TYPE SCRIPT
                      COMMAND ${CMAKE_COMMAND}
-                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                          ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_atlas_conservative_scaling.py
-                          --wheel ${IJEDI_MPAS_P0_WHEEL}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_atlas_conservative_scaling.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
                           --wheel-sha256
-                            ${IJEDI_MPAS_P0_WHEEL_SHA256}
+                            ${IJEDI_MPAS_WHEEL_SHA256}
                           --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                           --cases ${IJEDI_MPAS_GEOMETRY_CASES}
                           --executable $<TARGET_FILE:ijedi_mpas_atlas_topology.x>
@@ -204,20 +204,20 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
                    COMMAND ${Python3_EXECUTABLE}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/check_retired_geometry_absent.py
                         --source ${PROJECT_SOURCE_DIR}
-                        --python ${IJEDI_MPAS_P0_PYTHON}
+                        --python ${IJEDI_MPAS_PYTHON}
                         --library $<TARGET_FILE:ijedi>)
   ecbuild_add_test(TARGET ijedi_mpas_serialization_contracts
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_serialization_contract.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_serialization_contract.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --output
                           ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_serialization_contract.json)
   ecbuild_add_test(TARGET ijedi_mpas_oops_runtime_identity_attacks
@@ -231,11 +231,11 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
                           ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_runtime_identity_attacks.json)
 else()
   message(STATUS
-      "MPAS/OOPS real-grid tests disabled: set IJEDI_MPAS_P0_CASE_DIR, "
-      "IJEDI_MPAS_P0_WHEEL, IJEDI_MPAS_P0_PYTHON and IJEDI_MPAS_P0_DIRECT_ORACLE")
+      "MPAS/OOPS real-grid tests disabled: set IJEDI_MPAS_CASE_DIR, "
+      "IJEDI_MPAS_WHEEL, IJEDI_MPAS_PYTHON and IJEDI_MPAS_DIRECT_ORACLE")
 endif()
 
-set(IJEDI_MPAS_P2_LOCATIONS "" CACHE FILEPATH
+set(IJEDI_MPAS_ANALYSIS_LOCATIONS "" CACHE FILEPATH
     "Ordered global point corpus for the MPAS OOPS LocalInterpolator")
 ecbuild_add_test(TARGET ijedi_mpas_release_gate_negative_controls
                  TYPE SCRIPT
@@ -247,8 +247,8 @@ ecbuild_add_test(TARGET ijedi_mpas_reference_correction_controls
                  ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_reference_corrections.py)
 set(IJEDI_MPAS_CONTRACT_SOURCE_DIR "" CACHE PATH
     "Clean exact MPAS dependency checkout supplying unchanged registry tests only")
-if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
-   IJEDI_MPAS_P2_LOCATIONS)
+if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
+   IJEDI_MPAS_ANALYSIS_LOCATIONS)
   set(IJEDI_MPAS_P2_OUTPUT
       "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation.bin")
   set(IJEDI_MPAS_P2_DIRECT_OUTPUT
@@ -308,13 +308,13 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ijedi_mpas_variable_requests
                    MPI 1
                    OMP 1
-                   COMMAND ${IJEDI_MPAS_P0_PYTHON}
+                   COMMAND ${IJEDI_MPAS_PYTHON}
                    ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
                      --executable $<TARGET_FILE:ijedi_mpas_variable_requests.x>
                      --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml
-                     --case ${IJEDI_MPAS_P0_CASE_DIR}
+                     --case ${IJEDI_MPAS_CASE_DIR}
                      --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
-                     --wheel ${IJEDI_MPAS_P0_WHEEL}
+                     --wheel ${IJEDI_MPAS_WHEEL}
                      --atlas-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
                      --output-directory ${CMAKE_CURRENT_BINARY_DIR}/data_generated/variable_requests)
   ecbuild_add_test(TARGET ijedi_mpas_initial_clock
@@ -361,20 +361,20 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ijedi_mpas_typed_interpolation_direct
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/direct_typed_interpolation.py
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_typed_interpolation.py
                         --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --atlas-cache ${IJEDI_MPAS_P2_OUTPUT}.atlas-cache.json
                         --atlas-metrics ${IJEDI_MPAS_P2_METRICS}
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
-                        --locations ${IJEDI_MPAS_P2_LOCATIONS}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
                         --output-values ${IJEDI_MPAS_P2_DIRECT_OUTPUT}
                         --output-manifest ${IJEDI_MPAS_P2_DIRECT_MANIFEST}
                    TEST_DEPENDS ijedi_mpas_typed_interpolation)
@@ -390,7 +390,7 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ijedi_mpas_typed_oracle_negative_controls
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
                         ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_compare_typed_interpolation.py)
   ecbuild_add_test(TARGET ijedi_mpas_analysis_oracle_negative_controls
                    TYPE SCRIPT
@@ -431,19 +431,19 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ijedi_mpas_oops_getvalues_tlad_direct
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/direct_oops_tlad.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_oops_tlad.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --atlas-cache ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json.atlas-cache.json
                         --atlas-metrics ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
-                        --locations ${IJEDI_MPAS_P2_LOCATIONS}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
                         --output ${IJEDI_MPAS_ANALYSIS_DIRECT}.oops-tlad.json
                    TEST_DEPENDS ijedi_mpas_oops_getvalues_tlad)
   ecbuild_add_test(TARGET ijedi_mpas_oops_getvalues_tlad_vs_direct
@@ -461,19 +461,19 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ijedi_mpas_transforms_tlad
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_oops_native_composition_fd.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_oops_native_composition_fd.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --atlas-cache ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json.atlas-cache.json
                         --atlas-metrics ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
-                        --locations ${IJEDI_MPAS_P2_LOCATIONS}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
                         --oops ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
                         --output ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-native-composition-fd.json
                    TEST_DEPENDS ijedi_mpas_oops_getvalues_tlad_vs_direct)
@@ -489,27 +489,27 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
     ecbuild_add_test(TARGET ijedi_mpas_variable_schema
                      TYPE SCRIPT
                      COMMAND ${CMAKE_COMMAND}
-                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                          ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_variable_schema.py
-                          --wheel ${IJEDI_MPAS_P0_WHEEL}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_variable_schema.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
                           --wheel-sha256
-                            ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                          --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
+                            ${IJEDI_MPAS_WHEEL_SHA256}
+                          --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
                           --model-repo ${IJEDI_MPAS_CONTRACT_SOURCE_DIR}
                           --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_variable_schema.json)
   endif()
   ecbuild_add_test(TARGET ijedi_mpas_analysis_bridge_direct
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/direct_analysis_bridge.py
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_analysis_bridge.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
                         --output ${IJEDI_MPAS_ANALYSIS_DIRECT})
   ecbuild_add_test(TARGET ijedi_mpas_analysis_bridge_vs_direct
                    TYPE SCRIPT
@@ -528,27 +528,27 @@ if(IJEDI_MPAS_P0_CASE_DIR AND IJEDI_MPAS_P0_WHEEL AND IJEDI_MPAS_P0_PYTHON AND
   ecbuild_add_test(TARGET ${_derivative_test}
                    TYPE SCRIPT
                    COMMAND ${CMAKE_COMMAND}
-                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_P0_PYTHON}
-                        ${PROJECT_SOURCE_DIR}/tools/mpas_bridge/validate_real_typed_derivatives.py
-                        --init ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.init.nc
-                        --grid ${IJEDI_MPAS_P0_CASE_DIR}/x1.10242.grid.nc
-                        --namelist ${IJEDI_MPAS_P0_CASE_DIR}/namelist.atmosphere
-                        --wheel ${IJEDI_MPAS_P0_WHEEL}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_real_typed_derivatives.py
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --wheel ${IJEDI_MPAS_WHEEL}
                         --atlas-cache ${IJEDI_MPAS_P2_OUTPUT}.atlas-cache.json
                         --atlas-metrics ${IJEDI_MPAS_P2_METRICS}
                         --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
-                        --locations ${IJEDI_MPAS_P2_LOCATIONS}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
                         --state-generation ${_generation}
                         --wheel-sha256
-                          ${IJEDI_MPAS_P0_WHEEL_SHA256}
-                        --source-commit ${IJEDI_MPAS_P0_SOURCE_COMMIT}
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
                         --output
                           ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_derivatives_${_generation}.json
                    TEST_DEPENDS ijedi_mpas_typed_interpolation)
   endforeach()
 else()
   message(STATUS
-      "MPAS typed LocalInterpolator test disabled: set P0 inputs and MPAS P2 inputs")
+      "MPAS typed LocalInterpolator test disabled: set model inputs and MPAS analysis inputs")
 endif()
 
 # Link the directory 'data' to the test directory of the build
