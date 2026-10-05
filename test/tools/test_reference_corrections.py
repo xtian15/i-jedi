@@ -2,10 +2,38 @@
 import copy
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "test/mpas"))
 from validate_installed_contract_tests import check_retained_sources
+from composition_fd_controls import TRACER_SCALE, density_scale, retain_progress
+
+
+class CompositionFdControlsTests(unittest.TestCase):
+    def test_density_scale_is_mechanical_and_rejects_invalid_base(self):
+        self.assertEqual(TRACER_SCALE, .001)
+        self.assertEqual(density_scale(2.), .002)
+        self.assertEqual(density_scale(.25), .00025)
+        for value in (0., -1., float("inf"), float("nan")):
+            with self.assertRaises(RuntimeError):
+                density_scale(value)
+
+    def test_failed_progress_is_not_a_success_receipt(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "qualification.json"
+            trials = [dict(curve=[dict(step=16., relative_error=1.e-6)])]
+            retain_progress(output, trials)
+            progress = output.with_name(output.name + ".progress.json")
+            self.assertEqual(json.loads(progress.read_text())["status"], "in_progress")
+            failed = dict(error="second-order interval missing", curve=[])
+            retain_progress(output, trials, failed=failed)
+            payload = json.loads(progress.read_text())
+            self.assertEqual(payload["status"], "failed")
+            self.assertEqual(payload["validated_curves"], 1)
+            self.assertEqual(payload["failed_trial"], failed)
+            self.assertFalse(output.exists())
 
 
 class ReferenceCorrectionTests(unittest.TestCase):

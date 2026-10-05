@@ -108,8 +108,23 @@ State &State::operator+=(const Increment &increment) {
     throw eckit::BadParameter("Cannot add an Increment at a different valid time", Here());
   }
   if (isMpas()) {
-    throw eckit::NotImplemented(
-        "MPAS State increments require the stacked variable-transform PR", Here());
+    if (!increment.isMpas() ||
+        geom_.mpasContext()->geometryReceipt() !=
+            increment.geometry().mpasContext()->geometryReceipt() ||
+        geom_.mpasContext()->configurationReceipt() !=
+            increment.geometry().mpasContext()->configurationReceipt() ||
+        geom_.mpasContext()->stateSchemaDigest() !=
+            increment.geometry().mpasContext()->stateSchemaDigest()) {
+      throw eckit::BadParameter("MPAS Increment has a different native owner/support", Here());
+    }
+    auto values = increment.completeAnalysisArrays();
+    if (increment.analysisNamespace() == "control") {
+      values = backend_->controlToNative(values);
+    } else if (increment.analysisNamespace() != "native") {
+      throw eckit::BadParameter("MPAS State cannot install diagnostic/GeoVaL increments", Here());
+    }
+    backend_->addNativeAnalysis(values);
+    return *this;
   }
   if (!hasFieldSet()) {
     throw eckit::NotImplemented(

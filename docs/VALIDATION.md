@@ -45,7 +45,7 @@ Use `geometry` for geometry/State and `analysis` when the analysis interfaces ar
 python3 -B test/tools/test_release_gate.py
 python3 -B tools/qualification/run_mpas_tests.py \
   --source "$PWD" --build "$PWD/build" \
-  --manifest "$PWD/docs/MPAS_REQUIRED_TESTS.json" --suite geometry \
+  --manifest "$PWD/docs/MPAS_REQUIRED_TESTS.json" --suite analysis \
   --output "$PWD/../qualification" --lock-file "$SHARED_LOCK_FILE" \
   --build-jobs 2 --test-jobs 2
 ```

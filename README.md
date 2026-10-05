@@ -6,8 +6,8 @@ serial-global CPU float64 while retaining the FV3, MOM6, Atlas and GSI interface
 The geometry change builds native MPAS primal/dual Atlas meshes, authenticates
 mutable geometry handles, compiles point and conservative interpolation, and
 couples model-owned State storage to nonlinear OOPS steps and authenticated restart.
-The analysis and spatial derivative interfaces are introduced in the stacked
-second change.
+The stacked analysis change adds typed Increments, native analysis writes and
+spatial nonlinear, tangent-linear and adjoint variable transforms.
 
 Native test clients live in `test/mains`; independent model and Atlas checks live
 in `test/mpas`, with result comparisons in `test/tools`. `tools/mpas_runtime`
@@ -28,7 +28,7 @@ authenticated input cache described in the validation guide.
 cmake -G "Unix Makefiles" -S . -B build -C inputs.cmake \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_CXX_FLAGS=-ffp-contract=off \
   -DCMAKE_PREFIX_PATH="$DEPENDENCY_PREFIX;$SDK_PREFIX" \
-  -DIJEDI_MPAS_TEST_SUITE=geometry -DBUILD_TESTING=ON
+  -DIJEDI_MPAS_TEST_SUITE=analysis -DBUILD_TESTING=ON
 ```
 
 Run the release wrapper from the validation guide to build and test fresh owned

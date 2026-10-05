@@ -23,6 +23,7 @@
 #include "eckit/config/LocalConfiguration.h"
 #include "ijedi/Geometry/Geometry.h"
 #include "ijedi/Geometry/mpas/MpasAtlasGeometry.h"
+#include "ijedi/Increment/MpasIncrementBackend.h"
 #include "ijedi/Interpolation/AtlasOperatorReceipt.h"
 #include "ijedi/Python/MpasBackendContext.h"
 #include "ijedi/State/MpasFieldSetOwner.h"
@@ -375,6 +376,50 @@ MpasStateBackend::MpasStateBackend(const Geometry &geom, const MpasStateBackend 
 
 MpasStateBackend::~MpasStateBackend() = default;
 
+MpasAnalysisArrays StateBackend::nativeAnalysisValues() const {
+  throw eckit::BadParameter("native MPAS analysis requires an MPAS State backend", Here());
+}
+MpasAnalysisArrays StateBackend::controlToNative(const MpasAnalysisArrays &) const {
+  throw eckit::BadParameter("MPAS control mapping requires an MPAS State backend", Here());
+}
+MpasAnalysisArrays StateBackend::nativeCovectorsToControl(const MpasAnalysisArrays &) const {
+  throw eckit::BadParameter("MPAS covector mapping requires an MPAS State backend", Here());
+}
+MpasAnalysisArrays StateBackend::nativeGeovalJvp(const MpasAnalysisArrays &,
+                                                 const oops::Variables &) const {
+  throw eckit::BadParameter("MPAS JVP requires an MPAS State backend", Here());
+}
+MpasAnalysisArrays StateBackend::nativeGeovalVjp(const MpasAnalysisArrays &,
+                                                 const oops::Variables &) const {
+  throw eckit::BadParameter("MPAS VJP requires an MPAS State backend", Here());
+}
+void StateBackend::addNativeAnalysis(const MpasAnalysisArrays &) {
+  throw eckit::BadParameter("MPAS analysis updates require an MPAS State backend", Here());
+}
+MpasAnalysisArrays MpasStateBackend::nativeAnalysisValues() const {
+  return context_->nativeAnalysisValues(*state_);
+}
+MpasAnalysisArrays MpasStateBackend::controlToNative(const MpasAnalysisArrays &x) const {
+  return context_->controlToNative(*state_, x);
+}
+MpasAnalysisArrays MpasStateBackend::nativeCovectorsToControl(const MpasAnalysisArrays &x) const {
+  return context_->nativeCovectorsToControl(*state_, x);
+}
+MpasAnalysisArrays MpasStateBackend::nativeGeovalJvp(const MpasAnalysisArrays &x,
+                                                     const oops::Variables &vars) const {
+  (void)geom_.variableSizes(vars);
+  return context_->nativeGeovalJvp(*state_, x, vars.variables(), dateTimeString(time_));
+}
+MpasAnalysisArrays MpasStateBackend::nativeGeovalVjp(const MpasAnalysisArrays &x,
+                                                     const oops::Variables &vars) const {
+  (void)geom_.variableSizes(vars);
+  return context_->nativeGeovalVjp(*state_, x, vars.variables(), dateTimeString(time_));
+}
+void MpasStateBackend::addNativeAnalysis(const MpasAnalysisArrays &x) {
+  context_->addNativeAnalysis(*state_, x);
+  invalidateViews();
+}
+
 std::unique_ptr<StateBackend> MpasStateBackend::clone() const {
   return std::make_unique<MpasStateBackend>(*this);
 }
@@ -562,9 +607,67 @@ void MpasStateBackend::toFieldSet(atlas::FieldSet &target) const {
     fillTypedField(geom_, field, source);
   }
 }
-void MpasStateBackend::fromFieldSet(const atlas::FieldSet &) {
-  throw eckit::NotImplemented("MPAS analysis writes require the stacked variable-transform PR",
-                              Here());
+void MpasStateBackend::fromFieldSet(const atlas::FieldSet &source) {
+  if (source.empty()) {
+    throw eckit::BadValue("empty MPAS State write", Here());
+  }
+  std::vector<std::string> names;
+  bool control = true;
+  for (const auto &field : source) {
+    names.push_back(field.name());
+    control = control && field.name().rfind("control_", 0) == 0;
+  }
+  const oops::Variables requested(names);
+  if (control) {
+    // These are explicitly bound increments, never an absolute control State
+    // or an inverse diagnostic reconstruction.
+    MpasIncrementBackend increment(geom_, requested, time_);
+    increment.fromFieldSet(source);
+    addNativeAnalysis(controlToNative(increment.completeArrays()));
+    return;
+  }
+  const auto descriptors = stateFields(requested);
+  auto native = nativeAnalysisValues();
+  bool groupedTracers = false, individualTracers = false;
+  std::set<std::pair<std::string, int>> destinations;
+  for (const auto &descriptor : descriptors) {
+    if (descriptor.nameSpace != "native") {
+      throw eckit::BadValue("diagnostic/static/GeoVaL State writes are read-only", Here());
+    }
+    const auto field = source.field(descriptor.name);
+    checkTypedField(geom_, field, descriptor, true);
+    const auto array = readTypedField(geom_, field, descriptor);
+    if (field.metadata().getString("mpas_payload_receipt") != payloadHash(array)) {
+      throw eckit::BadValue("MPAS native State write payload receipt differs from actual bytes",
+                            Here());
+    }
+    const auto binding = nlohmann::json::parse(descriptor.descriptorBinding);
+    const auto &semantic = binding.at("descriptor");
+    const auto raw = semantic.at("native_name").get<std::string>();
+    const int destinationSlot =
+        semantic.at("tracer_index").is_null() ? -1 : semantic.at("tracer_index").get<int>();
+    if (!destinations.emplace(raw, destinationSlot).second) {
+      throw eckit::BadValue("aliases overlap in an MPAS native State write", Here());
+    }
+    if (semantic.at("tracer_index").is_null()) {
+      if (raw == "scalars") {
+        groupedTracers = true;
+      }
+      native.at(raw) = array;
+    } else {
+      individualTracers = true;
+      const size_t slot = semantic.at("tracer_index").get<size_t>();
+      auto &tracers = native.at("scalars");
+      for (size_t i = 0; i < array.values.size(); ++i) {
+        tracers.values.at(i * tracers.shape.back() + slot) = array.values[i];
+      }
+    }
+  }
+  if (groupedTracers && individualTracers) {
+    throw eckit::BadValue("overlapping grouped and individual tracer State writes", Here());
+  }
+  context_->replaceNativeAnalysis(*state_, native);
+  invalidateViews();
 }
 size_t MpasStateBackend::serialSize() const {
   const std::string bytes = context_->serializeState(*state_, dateTimeString(time_));

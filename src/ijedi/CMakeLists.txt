@@ -59,6 +59,9 @@ list(APPEND ijedi_src_files
   # Increment
   Increment/Increment.cc
   Increment/Increment.h
+  Increment/IncrementBackend.h
+  Increment/MpasIncrementBackend.cc
+  Increment/MpasIncrementBackend.h
 
   # Native Atlas runtime operators
   Interpolation/AtlasOperatorReceipt.h

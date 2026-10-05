@@ -47,6 +47,21 @@ auto pythonBoundary(const char *operation, Call &&call) -> decltype(call()) {
   }
 }
 
+// One owner lookup, invoked inside the calling operation's Python boundary.
+// Keep Python errors and their operation label owned until translation.
+std::string ownerVariableNamespace(const py::object &registry, const std::string &name) {
+  const auto aliases = registry.attr("FIELD_ALIASES");
+  const auto canonical = aliases.attr("get")(name, name);
+  const auto descriptor = registry.attr("FIELD_DESCRIPTORS").attr("__getitem__")(canonical);
+  const auto space = descriptor.attr("namespace").cast<std::string>();
+  // Descriptor IDs are registry identities, not extra GeoVaL API spellings.
+  // The installed nonlinear/JVP/VJP contract consumes the owner's aliases.
+  if (space == "geoval" && !aliases.attr("__contains__")(name).cast<bool>()) {
+    throw std::invalid_argument("unsupported MPAS public GeoVaL name: " + name);
+  }
+  return space;
+}
+
 std::shared_ptr<PythonRuntime> acquireRuntime(const std::string &pythonExecutable) {
   eckit::AutoLock<eckit::StaticMutex> guard(runtimeMutex);
   if (auto runtime = processRuntime.lock()) {
@@ -101,6 +116,63 @@ std::vector<double> tensorToDoubleVector(const py::object &tensor) {
 
 std::vector<std::int64_t> tensorToInt64Vector(const py::object &tensor) {
   return tensorToOwnedVector<std::int64_t>(tensor);
+}
+
+py::dict inputArrays(const MpasAnalysisArrays &arrays, const py::object &torch) {
+  py::dict result;
+  for (const auto &[name, array] : arrays) {
+    size_t count = 1;
+    if (array.shape.empty() || array.shape.size() > 3) {
+      throw std::invalid_argument("MPAS analysis transport requires rank one through three");
+    }
+    for (size_t extent : array.shape) {
+      if (!extent || count > std::numeric_limits<size_t>::max() / extent) {
+        throw std::invalid_argument("MPAS analysis transport extent overflow");
+      }
+      count *= extent;
+    }
+    if (count != array.values.size() || count > 256 * 1024 * 1024 / sizeof(double)) {
+      throw std::invalid_argument("MPAS analysis transport payload extent/capacity mismatch");
+    }
+    for (double value : array.values) {
+      if (!std::isfinite(value)) {
+        throw std::invalid_argument("MPAS analysis input is nonfinite");
+      }
+    }
+    const py::bytes bytes(reinterpret_cast<const char *>(array.values.data()),
+                          count * sizeof(double));
+    const auto buffer = py::module_::import("builtins").attr("bytearray")(bytes);
+    const py::object tensor =
+        torch.attr("frombuffer")(buffer, py::arg("dtype") = torch.attr("float64"))
+            .attr("clone")()
+            .attr("reshape")(py::cast(array.shape));
+    result[py::str(name)] = tensor;
+  }
+  return result;
+}
+
+MpasAnalysisArrays outputArrays(const py::dict &arrays, const py::object &assimilation) {
+  MpasAnalysisArrays result;
+  for (const auto &item : arrays) {
+    const std::string name = py::cast<std::string>(item.first);
+    const py::object tensor = py::reinterpret_borrow<py::object>(item.second);
+    assimilation.attr("_require_float64")(name, tensor);
+    MpasAnalysisArray array;
+    array.shape = tensor.attr("shape").cast<std::vector<size_t>>();
+    array.values = tensorToDoubleVector(tensor);
+    AtlasOperatorReceipt digest;
+    for (double value : array.values) {
+      digest.real(value);
+    }
+    if (digest.finish() != assimilation.attr("_tensor_manifest")(tensor)
+                               .cast<py::dict>()["sha256"]
+                               .cast<std::string>()) {
+      throw std::runtime_error("MPAS analysis output changed bytes across embedded boundary: " +
+                               name);
+    }
+    result.emplace(name, std::move(array));
+  }
+  return result;
 }
 
 // Diagnostic count of unique tensor storage retained by the context's four
@@ -166,6 +238,10 @@ struct MpasBackendContext::Impl {
   py::object contracts;
   py::object assimilation;
   py::object analysis;
+  py::object spaces;
+  py::object metrics;
+  MpasAnalysisArrays fixedMeasures;
+  std::string fixedMetricReceipt;
   py::object torch;
   py::object json;
   py::object config;
@@ -202,6 +278,36 @@ struct MpasBackendContext::Impl {
     bindings["configuration_receipt"] = configurationReceipt;
     bindings["package_identity"] = packageIdentity;
     return bindings;
+  }
+
+  py::object ownedMetrics(const py::dict &state) {
+    if (!spaces) {
+      spaces = runtime->importModule("mpas_pytorch.analysis_spaces");
+    }
+    if (!metrics) {
+      metrics = spaces.attr("build_analysis_inner_product_snapshot")(
+          state, py::arg("schema") = schema, py::arg("static_support") = staticSupport,
+          py::arg("geometry") = snapshot);
+    }
+    metrics.attr("validate")();
+    return metrics;
+  }
+
+  void ensureFixedMeasures() {
+    if (!fixedMeasures.empty()) {
+      return;
+    }
+    // Analysis APIs consume authenticated model states, not portable wire
+    // boundaries. Restore through the same owner operation as every handle.
+    const auto initialState = contracts.attr("compose_continuation_state")(
+        staticSupport, initialBoundary, py::arg("schema") = schema).cast<py::dict>();
+    const auto snapshotMetrics = ownedMetrics(initialState);
+    py::dict fields;
+    for (const std::string name : {"cell_layer", "cell_interface", "cell_surface", "edge_layer"}) {
+      fields[py::str(name)] = snapshotMetrics.attr("field")(name);
+    }
+    fixedMeasures = outputArrays(fields, assimilation);
+    fixedMetricReceipt = snapshotMetrics.attr("receipt").cast<std::string>();
   }
 
   py::dict trajectory(const py::dict &state, std::uint64_t generation,
@@ -544,6 +650,8 @@ MpasBackendContext::~MpasBackendContext() {
   }
   py::gil_scoped_acquire acquire;
   impl_->staticSupport = py::object();
+  impl_->metrics = py::object();
+  impl_->spaces = py::object();
   impl_->schema = py::object();
   impl_->packageIdentity = py::object();
   impl_->snapshot = py::object();
@@ -968,9 +1076,319 @@ size_t MpasBackendContext::typedFieldLevels(const oops::Variable &variable) cons
   return levels;
 }
 
+MpasAnalysisArrays MpasBackendContext::nativeAnalysisValues(const MpasStateHandle &state) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("native analysis values", [&] {
+    py::dict native;
+    for (const auto &name : impl_->analysis.attr("NATIVE_ANALYSIS_KEYS")) {
+      const py::object value = state.impl_->state[name];
+      native[name] = value.attr("__getitem__")(py::slice(py::none(), py::int_(-1), py::none()));
+    }
+    return outputArrays(native, impl_->assimilation);
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::analysisMeasures(const MpasStateHandle &state) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("State analysis measures", [&] {
+    const auto metrics = impl_->ownedMetrics(state.impl_->transformState);
+    py::dict fields;
+    for (const std::string name : {"cell_layer", "cell_interface", "cell_surface", "edge_layer"}) {
+      fields[py::str(name)] = metrics.attr("field")(name);
+    }
+    return outputArrays(fields, impl_->assimilation);
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::analysisMeasures() const {
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("fixed analysis measures", [&] {
+    impl_->ensureFixedMeasures();
+    // This context-owned cache has no external mutable alias. Returning copies
+    // cannot change the fixed metrics bound to the one authenticated schema.
+    return impl_->fixedMeasures;
+  });
+}
+
+std::vector<std::string> MpasBackendContext::analysisInventory(const std::string &nameSpace) const {
+  if (nameSpace != "native" && nameSpace != "control") {
+    throw std::invalid_argument("MPAS analysis inventory requires native or control namespace");
+  }
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("analysis inventory", [&] {
+    const py::object names = nameSpace == "native"
+                                 ? impl_->analysis.attr("NATIVE_ANALYSIS_KEYS")
+                                 : impl_->assimilation.attr("CONTROL_INCREMENT_KEYS");
+    std::vector<std::string> result;
+    for (const auto &name : names) {
+      result.push_back(py::cast<std::string>(name));
+    }
+    std::sort(result.begin(), result.end());
+    if (result.empty() || std::adjacent_find(result.begin(), result.end()) != result.end()) {
+      throw std::invalid_argument("MPAS owner analysis inventory is empty or ambiguous");
+    }
+    return result;
+  });
+}
+
+std::string MpasBackendContext::variableBinding(const std::string &name,
+                                                const std::string &nameSpace,
+                                                const std::string &validTime) const {
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("variable binding", [&] {
+    (void)ownerVariableNamespace(impl_->assimilation, name);
+    impl_->ensureFixedMeasures();
+    const py::object descriptor = impl_->assimilation.attr("resolve_field_descriptor")(
+        name, py::arg("namespace") = nameSpace);
+    py::dict context = impl_->transformBindings();
+    context["valid_time"] = validTime;
+    context["runtime_support_receipt"] = impl_->schema.attr("support_digest");
+    context["analysis_metric_receipt"] = impl_->fixedMetricReceipt;
+    context["space_kind"] = "fixed_geometry_L2_increment_not_native_state_v1";
+    py::dict binding;
+    binding["descriptor"] = impl_->runtime->importModule("dataclasses").attr("asdict")(descriptor);
+    binding["descriptor_registry_digest"] =
+        impl_->assimilation.attr("descriptor_registry_manifest")().cast<py::dict>()["digest"];
+    binding["context"] = context;
+    return impl_->json
+        .attr("dumps")(binding, py::arg("sort_keys") = true, py::arg("allow_nan") = false,
+                       py::arg("separators") = py::make_tuple(",", ":"))
+        .cast<std::string>();
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::controlToNative(const MpasStateHandle &state,
+                                                       const MpasAnalysisArrays &arrays) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("control-to-native", [&] {
+    const auto metrics = impl_->ownedMetrics(state.impl_->transformState);
+    const py::dict result =
+        impl_->spaces
+            .attr("owned_control_increment_to_native")(
+                state.impl_->transformState, inputArrays(arrays, impl_->torch),
+                py::arg("schema") = impl_->schema, py::arg("static_support") = impl_->staticSupport,
+                py::arg("geometry") = impl_->snapshot, py::arg("metrics") = metrics)
+            .cast<py::dict>();
+    return outputArrays(result, impl_->assimilation);
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::nativeCovectorsToControl(
+    const MpasStateHandle &state, const MpasAnalysisArrays &arrays) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("native-to-control adjoint", [&] {
+    const auto metrics = impl_->ownedMetrics(state.impl_->transformState);
+    const py::dict result =
+        impl_->spaces
+            .attr("owned_native_covectors_to_control")(
+                state.impl_->transformState, inputArrays(arrays, impl_->torch),
+                py::arg("schema") = impl_->schema, py::arg("static_support") = impl_->staticSupport,
+                py::arg("geometry") = impl_->snapshot, py::arg("metrics") = metrics)
+            .cast<py::dict>();
+    return outputArrays(result, impl_->assimilation);
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::nativeGeovalJvp(const MpasStateHandle &state,
+                                                       const MpasAnalysisArrays &arrays,
+                                                       const std::vector<std::string> &names,
+                                                       const std::string &validTime) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("native GeoVaL JVP", [&] {
+    py::dict tangents = inputArrays(arrays, impl_->torch);
+    const auto required = impl_->analysis.attr("NATIVE_ANALYSIS_KEYS");
+    if (py::len(tangents) != py::len(required)) {
+      throw std::invalid_argument("MPAS native JVP requires exactly five prognostic directions");
+    }
+    for (const auto &name : required) {
+      if (!tangents.contains(name)) {
+        throw std::invalid_argument("MPAS native JVP omitted a direction");
+      }
+      const py::object tangent = tangents[name], primal = state.impl_->state[name];
+      auto expected = primal.attr("shape").cast<std::vector<size_t>>();
+      --expected.at(0);
+      if (tangent.attr("shape").cast<std::vector<size_t>>() != expected) {
+        throw std::invalid_argument("MPAS native JVP direction extent/stagger/tracer mismatch");
+      }
+      const auto padding = impl_->torch.attr("zeros_like")(
+          tangent.attr("__getitem__")(py::slice(py::int_(0), py::int_(1), py::none())));
+      tangents[name] = impl_->torch.attr("cat")(py::make_tuple(tangent, padding));
+    }
+    const py::tuple result =
+        impl_->analysis
+            .attr("analysis_geoval_jvp")(
+                state.impl_->transformState, impl_->mesh, tangents,
+                py::arg("schema") = impl_->schema, py::arg("config") = impl_->config,
+                py::arg("static_support") = impl_->staticSupport,
+                py::arg("namelist_path") = impl_->namelistPath,
+                py::arg("geometry") = impl_->snapshot, py::arg("requested_fields") = names,
+                py::arg("trajectory_receipt") = impl_->trajectory(
+                    state.impl_->transformState, state.impl_->generation, validTime),
+                py::arg("expected_valid_time") = validTime,
+                py::arg("expected_state_generation") = state.impl_->generation,
+                py::arg("expected_bindings") = impl_->transformBindings())
+            .cast<py::tuple>();
+    return outputArrays(result[1].cast<py::dict>(), impl_->assimilation);
+  });
+}
+
+MpasAnalysisArrays MpasBackendContext::nativeGeovalVjp(const MpasStateHandle &state,
+                                                       const MpasAnalysisArrays &arrays,
+                                                       const std::vector<std::string> &names,
+                                                       const std::string &validTime) const {
+  requireOwned(state);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("native GeoVaL VJP", [&] {
+    const py::tuple result =
+        impl_->analysis
+            .attr("analysis_geoval_vjp")(
+                state.impl_->transformState, impl_->mesh, inputArrays(arrays, impl_->torch),
+                py::arg("schema") = impl_->schema, py::arg("config") = impl_->config,
+                py::arg("static_support") = impl_->staticSupport,
+                py::arg("namelist_path") = impl_->namelistPath,
+                py::arg("geometry") = impl_->snapshot, py::arg("requested_fields") = names,
+                py::arg("trajectory_receipt") = impl_->trajectory(
+                    state.impl_->transformState, state.impl_->generation, validTime),
+                py::arg("expected_valid_time") = validTime,
+                py::arg("expected_state_generation") = state.impl_->generation,
+                py::arg("expected_bindings") = impl_->transformBindings())
+            .cast<py::tuple>();
+    py::dict gradients;
+    for (const auto &item : result[1].cast<py::dict>()) {
+      gradients[item.first] =
+          item.second.attr("__getitem__")(py::slice(py::none(), py::int_(-1), py::none()));
+    }
+    return outputArrays(gradients, impl_->assimilation);
+  });
+}
+
+void MpasBackendContext::replaceNativeAnalysis(MpasStateHandle &state,
+                                               const MpasAnalysisArrays &arrays) const {
+  requireOwned(state, true);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  pythonBoundary("native analysis replacement", [&] {
+    const py::dict result =
+        impl_->analysis
+            .attr("replace_native_analysis_values")(
+                state.impl_->transformState, impl_->mesh, inputArrays(arrays, impl_->torch),
+                py::arg("schema") = impl_->schema, py::arg("config") = impl_->config,
+                py::arg("static_support") = impl_->staticSupport,
+                py::arg("namelist_path") = impl_->namelistPath)
+            .cast<py::dict>();
+    const py::dict boundary =
+        impl_->contracts
+            .attr("extract_continuation_boundary")(result, py::arg("schema") = impl_->schema)
+            .cast<py::dict>();
+    state.impl_->state = boundary;
+    state.impl_->transformState = result;
+    state.impl_->lastOutput = py::dict();
+    state.impl_->compact = true;
+    ++state.impl_->generation;
+  });
+}
+
+void MpasBackendContext::addNativeAnalysis(MpasStateHandle &state,
+                                           const MpasAnalysisArrays &arrays) const {
+  requireOwned(state, true);
+  eckit::AutoLock<eckit::Mutex> guard(impl_->mutex);
+  py::gil_scoped_acquire acquire;
+  pythonBoundary("native analysis addition", [&] {
+    const py::dict result =
+        impl_->analysis
+            .attr("apply_native_analysis_increment")(
+                state.impl_->transformState, impl_->mesh, inputArrays(arrays, impl_->torch),
+                py::arg("schema") = impl_->schema, py::arg("config") = impl_->config,
+                py::arg("static_support") = impl_->staticSupport,
+                py::arg("namelist_path") = impl_->namelistPath)
+            .cast<py::dict>();
+    const py::dict boundary =
+        impl_->contracts
+            .attr("extract_continuation_boundary")(result, py::arg("schema") = impl_->schema)
+            .cast<py::dict>();
+    state.impl_->state = boundary;
+    state.impl_->transformState = result;
+    state.impl_->lastOutput = py::dict();
+    state.impl_->compact = true;
+    ++state.impl_->generation;
+  });
+}
+
+std::string MpasBackendContext::variableRegistryManifest() const {
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("variable registry", [&] {
+    return impl_->json.attr("dumps")(impl_->assimilation.attr("descriptor_registry_manifest")(),
+                                     py::arg("sort_keys") = true).cast<std::string>();
+  });
+}
+
+std::string MpasBackendContext::variableNamespace(const std::string &name) const {
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("public variable name", [&] {
+    return ownerVariableNamespace(impl_->assimilation, name);
+  });
+}
+
+std::vector<std::string> MpasBackendContext::geovalPublicNames() const {
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("public GeoVaL inventory", [&] {
+    std::vector<std::string> names;
+    const py::dict aliases = impl_->runtime->importModule("builtins").attr("dict")(
+        impl_->assimilation.attr("FIELD_ALIASES"));
+    for (const auto &item : aliases) {
+      const auto descriptor =
+          impl_->assimilation.attr("FIELD_DESCRIPTORS").attr("__getitem__")(item.second);
+      if (descriptor.attr("namespace").cast<std::string>() == "geoval") {
+        names.push_back(py::cast<std::string>(item.first));
+      }
+    }
+    std::sort(names.begin(), names.end());
+    return names;
+  });
+}
+
+std::vector<std::string> MpasBackendContext::geovalWindNames() const {
+  py::gil_scoped_acquire acquire;
+  return pythonBoundary("GeoVaL wind semantics", [&] {
+    std::vector<std::string> names(2);
+    for (const auto &name : geovalPublicNames()) {
+      const auto canonical = impl_->assimilation.attr("FIELD_ALIASES").attr("__getitem__")(name);
+      const auto descriptor =
+          impl_->assimilation.attr("FIELD_DESCRIPTORS").attr("__getitem__")(canonical);
+      if (descriptor.attr("component_basis").cast<std::string>() != "local_east_north") continue;
+      const auto semantic = descriptor.attr("semantic_id").cast<std::string>();
+      const int component = semantic == "ufo.geoval.eastward_wind" ? 0 :
+                            semantic == "ufo.geoval.northward_wind" ? 1 : -1;
+      if (component < 0 || !names[component].empty()) {
+        throw std::invalid_argument("unsupported or ambiguous MPAS GeoVaL vector semantics");
+      }
+      names[component] = name;
+    }
+    if (names[0].empty() || names[1].empty()) {
+      throw std::invalid_argument("MPAS owner lacks paired GeoVaL vector semantics");
+    }
+    return names;
+  });
+}
+
 size_t MpasBackendContext::typedFieldLevels(const std::string &name) const {
   py::gil_scoped_acquire acquire;
   try {
+    (void)ownerVariableNamespace(impl_->assimilation, name);
     const py::object aliases = impl_->assimilation.attr("FIELD_ALIASES");
     const py::object canonical = aliases.attr("get")(name, name);
     const py::object descriptor =

@@ -53,6 +53,15 @@ class StateBackend {
   virtual std::string continuationManifest() const;
   virtual std::string typedTransformManifest() const;
   virtual std::vector<MpasTypedField> materializeTypedFields(const oops::Variables &) const;
+  virtual MpasAnalysisArrays nativeAnalysisValues() const;
+  virtual MpasAnalysisArrays controlToNative(const MpasAnalysisArrays &) const;
+  virtual MpasAnalysisArrays nativeCovectorsToControl(const MpasAnalysisArrays &) const;
+  virtual MpasAnalysisArrays nativeGeovalJvp(const MpasAnalysisArrays &,
+                                             const oops::Variables &) const;
+  virtual MpasAnalysisArrays nativeGeovalVjp(const MpasAnalysisArrays &,
+                                             const oops::Variables &) const;
+  virtual void addNativeAnalysis(const MpasAnalysisArrays &);
+
   virtual atlas::FieldSet &fieldSet() = 0;
   virtual const atlas::FieldSet &fieldSet() const = 0;
   virtual void toFieldSet(atlas::FieldSet &) const = 0;
@@ -132,6 +141,15 @@ class MpasStateBackend final : public StateBackend {
   std::string continuationManifest() const override;
   std::string typedTransformManifest() const override;
   std::vector<MpasTypedField> materializeTypedFields(const oops::Variables &) const override;
+  MpasAnalysisArrays nativeAnalysisValues() const override;
+  MpasAnalysisArrays controlToNative(const MpasAnalysisArrays &) const override;
+  MpasAnalysisArrays nativeCovectorsToControl(const MpasAnalysisArrays &) const override;
+  MpasAnalysisArrays nativeGeovalJvp(const MpasAnalysisArrays &,
+                                     const oops::Variables &) const override;
+  MpasAnalysisArrays nativeGeovalVjp(const MpasAnalysisArrays &,
+                                     const oops::Variables &) const override;
+  void addNativeAnalysis(const MpasAnalysisArrays &) override;
+
   atlas::FieldSet &fieldSet() override;
   const atlas::FieldSet &fieldSet() const override;
   void toFieldSet(atlas::FieldSet &) const override;

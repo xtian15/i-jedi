@@ -236,10 +236,8 @@ else()
       "IJEDI_MPAS_WHEEL, IJEDI_MPAS_PYTHON and IJEDI_MPAS_DIRECT_ORACLE")
 endif()
 
-# Analysis tests require the typed analysis interfaces.
-if(IJEDI_MPAS_TEST_SUITE STREQUAL "analysis")
-  message(FATAL_ERROR "Analysis tests require the analysis interfaces")
-endif()
+set(IJEDI_MPAS_ANALYSIS_LOCATIONS "" CACHE FILEPATH
+    "Ordered global point corpus for the MPAS OOPS LocalInterpolator")
 ecbuild_add_test(TARGET ijedi_mpas_release_gate_negative_controls
                  TYPE SCRIPT
                  COMMAND ${Python3_EXECUTABLE}
@@ -248,6 +246,312 @@ ecbuild_add_test(TARGET ijedi_mpas_reference_correction_controls
                  TYPE SCRIPT
                  COMMAND ${Python3_EXECUTABLE}
                  ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_reference_corrections.py)
+set(IJEDI_MPAS_CONTRACT_SOURCE_DIR "" CACHE PATH
+    "Clean exact MPAS dependency checkout supplying unchanged registry tests only")
+if(IJEDI_MPAS_CASE_DIR AND IJEDI_MPAS_WHEEL AND IJEDI_MPAS_PYTHON AND
+   IJEDI_MPAS_ANALYSIS_LOCATIONS)
+  set(IJEDI_MPAS_INTERPOLATION_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation.bin")
+  set(IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_direct.bin")
+  set(IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_direct.json")
+  set(IJEDI_MPAS_INTERPOLATION_METRICS
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_interpolation_metrics.json")
+  set(IJEDI_MPAS_ANALYSIS_OUTPUT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_analysis_bridge.json")
+  set(IJEDI_MPAS_ANALYSIS_DIRECT
+      "${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_analysis_bridge_direct.json")
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "ownership")
+  set(IJEDI_MPAS_STATE_PROBE_MODE "views")
+  set(IJEDI_MPAS_PARTIAL_PROBE false)
+  set(IJEDI_MPAS_NATIVE_SOCKET_PROBE false)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "lifetime")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-handle-lifetime.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "ownership")
+  set(IJEDI_MPAS_STATE_PROBE_MODE "initial-clock")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-initial-clock.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "errors")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-handle-errors.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "generation")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-generation-limit.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "restart")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-runtime-restart.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "initial-boundary")
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-initial-boundary.yaml @ONLY)
+  set(IJEDI_MPAS_HANDLE_PROBE_MODE "ownership")
+  set(IJEDI_MPAS_STATE_PROBE_MODE "views")
+  set(IJEDI_MPAS_PARTIAL_PROBE true)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-partial-probe.yaml @ONLY)
+  set(IJEDI_MPAS_PARTIAL_PROBE false)
+  set(IJEDI_MPAS_NATIVE_SOCKET_PROBE true)
+  configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/testinput/tier0_integration_mpas-typed-interpolation.yaml.in
+      ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-native-p-socket.yaml @ONLY)
+  set(IJEDI_MPAS_NATIVE_SOCKET_PROBE false)
+  ecbuild_add_test(TARGET ijedi_mpas_variable_requests
+                   MPI 1
+                   OMP 1
+                   COMMAND ${IJEDI_MPAS_PYTHON}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/run_mpas_api_contracts.py
+                     --kind variables
+                     --executable $<TARGET_FILE:ijedi_mpas_variable_requests.x>
+                     --configuration ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml
+                     --case ${IJEDI_MPAS_CASE_DIR}
+                     --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
+                     --wheel ${IJEDI_MPAS_WHEEL}
+                     --atlas-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                     --output-directory ${CMAKE_CURRENT_BINARY_DIR}/data_generated/variable_requests)
+  ecbuild_add_test(TARGET ijedi_mpas_initial_clock
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_state_atlas_views.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-initial-clock.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_handle_ownership
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_handle_lifetime
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-handle-lifetime.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_initial_boundary
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-initial-boundary.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_variable_negative_controls
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-handle-errors.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_generation_limit
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-generation-limit.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_runtime_restart_rejected
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_handle_ownership.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-runtime-restart.yaml)
+  set_tests_properties(ijedi_mpas_runtime_restart_rejected PROPERTIES TIMEOUT 90)
+  ecbuild_add_test(TARGET ijedi_mpas_typed_interpolation
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_typed_interpolation.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_typed_interpolation_direct
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_typed_interpolation.py
+                        --runtime-receipt ${IJEDI_MPAS_RUNTIME_RECEIPT}
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --atlas-cache ${IJEDI_MPAS_INTERPOLATION_OUTPUT}.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_INTERPOLATION_METRICS}
+                        --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
+                        --output-values ${IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT}
+                        --output-manifest ${IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST}
+                   TEST_DEPENDS ijedi_mpas_typed_interpolation)
+  ecbuild_add_test(TARGET ijedi_mpas_transforms_nonlinear
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/compare_typed_interpolation.py
+                        --oops ${IJEDI_MPAS_INTERPOLATION_OUTPUT}
+                        --direct ${IJEDI_MPAS_INTERPOLATION_DIRECT_OUTPUT}
+                        --manifest ${IJEDI_MPAS_INTERPOLATION_DIRECT_MANIFEST}
+                   TEST_DEPENDS ijedi_mpas_typed_interpolation
+                                ijedi_mpas_typed_interpolation_direct)
+  ecbuild_add_test(TARGET ijedi_mpas_typed_oracle_negative_controls
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_compare_typed_interpolation.py)
+  ecbuild_add_test(TARGET ijedi_mpas_analysis_oracle_negative_controls
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_compare_analysis_bridge.py)
+  ecbuild_add_test(TARGET ijedi_mpas_analysis_bridge
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_analysis_bridge.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_increment_algebra
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_increment_algebra.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_partial_transforms
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_partial_transforms.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  set_tests_properties(ijedi_mpas_partial_transforms PROPERTIES TIMEOUT 3600)
+  ecbuild_add_test(TARGET ijedi_mpas_control_native_tlad
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_partial_transforms.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-native-p-socket.yaml)
+  set_tests_properties(ijedi_mpas_control_native_tlad PROPERTIES TIMEOUT 3600)
+  ecbuild_add_test(TARGET ijedi_mpas_state_atlas_views
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_state_atlas_views.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_getvalues_tlad
+                   MPI 1
+                   OMP 1
+                   COMMAND $<TARGET_FILE:ijedi_mpas_oops_getvalues_tlad.x>
+                   ARGS ${CMAKE_CURRENT_BINARY_DIR}/tier0_integration_mpas-typed-interpolation.yaml)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_getvalues_tlad_direct
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_oops_tlad.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --atlas-cache ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
+                        --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
+                        --output ${IJEDI_MPAS_ANALYSIS_DIRECT}.oops-tlad.json
+                   TEST_DEPENDS ijedi_mpas_oops_getvalues_tlad)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_getvalues_tlad_vs_direct
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/compare_oops_tlad.py
+                        --oops ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
+                        --direct ${IJEDI_MPAS_ANALYSIS_DIRECT}.oops-tlad.json
+                   TEST_DEPENDS ijedi_mpas_oops_getvalues_tlad
+                                ijedi_mpas_oops_getvalues_tlad_direct)
+  ecbuild_add_test(TARGET ijedi_mpas_oops_tlad_oracle_negative_controls
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/test_compare_oops_tlad.py)
+  ecbuild_add_test(TARGET ijedi_mpas_transforms_tlad
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_oops_native_composition_fd.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --atlas-cache ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
+                        --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
+                        --oops ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-tlad.json
+                        --output ${IJEDI_MPAS_ANALYSIS_OUTPUT}.oops-native-composition-fd.json
+                   TEST_DEPENDS ijedi_mpas_oops_getvalues_tlad_vs_direct)
+  # Resource limits for the complete three-state/four-seed response inventory;
+  # numerical tolerances and mandatory cases remain unchanged.
+  set_tests_properties(ijedi_mpas_oops_getvalues_tlad
+                       ijedi_mpas_oops_getvalues_tlad_direct PROPERTIES TIMEOUT 3600)
+  set_tests_properties(ijedi_mpas_transforms_tlad PROPERTIES TIMEOUT 14400)
+  if(IJEDI_MPAS_CONTRACT_SOURCE_DIR)
+    if(NOT EXISTS "${IJEDI_MPAS_CONTRACT_SOURCE_DIR}/dycore-torch/mpas-pytorch/tests/test_variable_registry.py")
+      message(FATAL_ERROR "MPAS registry test authority is missing")
+    endif()
+    ecbuild_add_test(TARGET ijedi_mpas_variable_schema
+                     TYPE SCRIPT
+                     COMMAND ${CMAKE_COMMAND}
+                     ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                          ${PROJECT_SOURCE_DIR}/test/mpas/validate_variable_schema.py
+                          --wheel ${IJEDI_MPAS_WHEEL}
+                          --wheel-sha256
+                            ${IJEDI_MPAS_WHEEL_SHA256}
+                          --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                          --model-repo ${IJEDI_MPAS_CONTRACT_SOURCE_DIR}
+                          --output ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_variable_schema.json)
+  endif()
+  ecbuild_add_test(TARGET ijedi_mpas_analysis_bridge_direct
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/direct_analysis_bridge.py
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --output ${IJEDI_MPAS_ANALYSIS_DIRECT})
+  ecbuild_add_test(TARGET ijedi_mpas_analysis_bridge_vs_direct
+                   TYPE SCRIPT
+                   COMMAND ${Python3_EXECUTABLE}
+                   ARGS ${CMAKE_CURRENT_SOURCE_DIR}/tools/compare_analysis_bridge.py
+                        --embedded ${IJEDI_MPAS_ANALYSIS_OUTPUT}
+                        --direct ${IJEDI_MPAS_ANALYSIS_DIRECT}
+                   TEST_DEPENDS ijedi_mpas_analysis_bridge
+                                ijedi_mpas_analysis_bridge_direct)
+  foreach(_generation IN ITEMS 0 1 2)
+    if(_generation EQUAL 1)
+      set(_derivative_test ijedi_mpas_typed_derivatives_real)
+    else()
+      set(_derivative_test ijedi_mpas_typed_derivatives_real_generation_${_generation})
+    endif()
+  ecbuild_add_test(TARGET ${_derivative_test}
+                   TYPE SCRIPT
+                   COMMAND ${CMAKE_COMMAND}
+                   ARGS -E env --unset=PYTHONPATH ${IJEDI_MPAS_PYTHON}
+                        ${PROJECT_SOURCE_DIR}/test/mpas/validate_real_typed_derivatives.py
+                        --init ${IJEDI_MPAS_CASE_DIR}/x1.10242.init.nc
+                        --grid ${IJEDI_MPAS_CASE_DIR}/x1.10242.grid.nc
+                        --namelist ${IJEDI_MPAS_CASE_DIR}/namelist.atmosphere
+                        --wheel ${IJEDI_MPAS_WHEEL}
+                        --atlas-cache ${IJEDI_MPAS_INTERPOLATION_OUTPUT}.atlas-cache.json
+                        --atlas-metrics ${IJEDI_MPAS_INTERPOLATION_METRICS}
+                        --atlas-compiler-identity ${IJEDI_MPAS_ATLAS_COMPILER_IDENTITY}
+                        --locations ${IJEDI_MPAS_ANALYSIS_LOCATIONS}
+                        --state-generation ${_generation}
+                        --wheel-sha256
+                          ${IJEDI_MPAS_WHEEL_SHA256}
+                        --source-commit ${IJEDI_MPAS_SOURCE_COMMIT}
+                        --output
+                          ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mpas_typed_derivatives_${_generation}.json
+                   TEST_DEPENDS ijedi_mpas_typed_interpolation)
+  endforeach()
+else()
+  message(STATUS
+      "MPAS typed LocalInterpolator test disabled: set model inputs and MPAS analysis inputs")
+endif()
 
 # Link the directory 'data' to the test directory of the build
 # ------------------------------------------------------------
@@ -273,23 +577,23 @@ file(CREATE_LINK
 ecbuild_add_test(TARGET  ijedi_setup_mom6_testdata
                  TYPE    SCRIPT
                  COMMAND ${CMAKE_COMMAND}
-                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
-                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_mom6_testdata.py
-                      ${CMAKE_CURRENT_SOURCE_DIR}/data/mom6 ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mom6)
+                 ARGS    -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_mom6_testdata.py
+                         ${CMAKE_CURRENT_SOURCE_DIR}/data/mom6 ${CMAKE_CURRENT_BINARY_DIR}/data_generated/mom6)
 
 ecbuild_add_test(TARGET  ijedi_setup_obs_testdata
                  TYPE    SCRIPT
                  COMMAND ${CMAKE_COMMAND}
-                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
-                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_obs_testdata.py
-                      ${CMAKE_CURRENT_SOURCE_DIR}/data/obs ${CMAKE_CURRENT_BINARY_DIR}/data_generated/obs)
+                 ARGS    -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_obs_testdata.py
+                         ${CMAKE_CURRENT_SOURCE_DIR}/data/obs ${CMAKE_CURRENT_BINARY_DIR}/data_generated/obs)
 
 ecbuild_add_test(TARGET ijedi_setup_fv3_testdata
                  TYPE SCRIPT
                  COMMAND ${CMAKE_COMMAND}
-                 ARGS -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
-                      ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_fv3_testdata.py
-                      ${CMAKE_CURRENT_BINARY_DIR}/data_generated/fv3)
+                 ARGS    -E env --unset=PYTHONPATH ${Python3_EXECUTABLE}
+                         ${CMAKE_CURRENT_SOURCE_DIR}/tools/gen_fv3_testdata.py
+                         ${CMAKE_CURRENT_BINARY_DIR}/data_generated/fv3)
 
 # Geometry tests
 ecbuild_add_test( TARGET  ijedi_geometry_fv3
