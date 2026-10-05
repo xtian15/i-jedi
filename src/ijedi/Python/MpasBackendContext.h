@@ -102,6 +102,27 @@ class MpasBackendContext {
   // Model declarations are views of the owner's native analysis inventory,
   // not an arbitrary list ignored by the numerical step.
   void validateModelVariables(const oops::Variables &) const;
+  std::string variableNamespace(const std::string &) const;
+  std::vector<std::string> geovalPublicNames() const;
+  std::vector<std::string> geovalWindNames() const;
+  std::string variableRegistryManifest() const;
+  MpasAnalysisArrays nativeAnalysisValues(const MpasStateHandle &) const;
+  MpasAnalysisArrays analysisMeasures(const MpasStateHandle &) const;
+  MpasAnalysisArrays analysisMeasures() const;
+  std::vector<std::string> analysisInventory(const std::string &nameSpace) const;
+  std::string variableBinding(const std::string &name, const std::string &nameSpace,
+                              const std::string &validTime) const;
+  MpasAnalysisArrays controlToNative(const MpasStateHandle &, const MpasAnalysisArrays &) const;
+  MpasAnalysisArrays nativeCovectorsToControl(const MpasStateHandle &,
+                                              const MpasAnalysisArrays &) const;
+  MpasAnalysisArrays nativeGeovalJvp(const MpasStateHandle &, const MpasAnalysisArrays &,
+                                     const std::vector<std::string> &,
+                                     const std::string &validTime) const;
+  MpasAnalysisArrays nativeGeovalVjp(const MpasStateHandle &, const MpasAnalysisArrays &,
+                                     const std::vector<std::string> &,
+                                     const std::string &validTime) const;
+  void replaceNativeAnalysis(MpasStateHandle &, const MpasAnalysisArrays &) const;
+  void addNativeAnalysis(MpasStateHandle &, const MpasAnalysisArrays &) const;
   std::string serializeState(const MpasStateHandle &, const std::string &validTime) const;
   std::shared_ptr<MpasStateHandle> deserializeState(const std::string &,
                                                     const std::string &validTime,

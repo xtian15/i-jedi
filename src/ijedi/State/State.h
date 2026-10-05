@@ -83,6 +83,22 @@ class State : public util::Printable, private util::ObjectCounter<State> {
 
   State &operator=(const State &);
   State &operator+=(const Increment &);
+  MpasAnalysisArrays nativeAnalysisValues() const { return backend_->nativeAnalysisValues(); }
+  MpasAnalysisArrays controlToNative(const MpasAnalysisArrays &x) const {
+    return backend_->controlToNative(x);
+  }
+  MpasAnalysisArrays nativeCovectorsToControl(const MpasAnalysisArrays &x) const {
+    return backend_->nativeCovectorsToControl(x);
+  }
+  MpasAnalysisArrays nativeGeovalJvp(const MpasAnalysisArrays &x,
+                                     const oops::Variables &vars) const {
+    return backend_->nativeGeovalJvp(x, vars);
+  }
+  MpasAnalysisArrays nativeGeovalVjp(const MpasAnalysisArrays &x,
+                                     const oops::Variables &vars) const {
+    return backend_->nativeGeovalVjp(x, vars);
+  }
+
   const util::DateTime validTime() const { return backend_->validTime(); }
   void updateTime(const util::Duration &dt) { backend_->updateTime(dt); }
   const oops::Variables &variables() const { return backend_->variables(); }

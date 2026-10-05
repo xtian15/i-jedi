@@ -26,6 +26,7 @@ class Increment;
 class LinearVariableChange : public util::Printable {
  public:
   LinearVariableChange(const Geometry &, const eckit::Configuration &);
+  ~LinearVariableChange();
 
   /// Inject geometry-sourced trajectory ingredients (latitude, longitude,
   /// sea_area_fraction) required by SeaWaterTemperature_B's Jacobian before
@@ -39,9 +40,12 @@ class LinearVariableChange : public util::Printable {
  private:
   void selectVariables(Increment &, const oops::Variables &) const;
   void ensureLinearPlan(oops::Variables &) const;
+  void requireMpasTrajectory(const Increment &, const oops::Variables &) const;
+  void mpasInverseIdentity(Increment &, const oops::Variables &) const;
   void print(std::ostream &) const override {}
-  const Geometry & geom_;
+  const Geometry &geom_;
   std::unique_ptr<vader::Vader> vader_;
+  std::unique_ptr<State> mpasTrajectory_;
   mutable oops::Variables varsVaderPopulates_;
 };
 

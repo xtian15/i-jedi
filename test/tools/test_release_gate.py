@@ -344,13 +344,14 @@ class ReleaseGateTests(unittest.TestCase):
             "ijedi_mpas_geometry_negative_controls", "ijedi_mpas_retired_geometry_absent",
         })
         self.assertEqual(set(manifest["pr2"]), {
+            "ijedi_mpas_variable_requests",
             "ijedi_mpas_variable_schema", "ijedi_mpas_state_atlas_views",
             "ijedi_mpas_increment_algebra", "ijedi_mpas_transforms_nonlinear",
             "ijedi_mpas_transforms_tlad", "ijedi_mpas_oops_getvalues_tlad",
             "ijedi_mpas_control_native_tlad", "ijedi_mpas_variable_negative_controls",
         })
         self.assertEqual(len(GATE.required_names(manifest, "pr1")), 48)
-        self.assertEqual(len(GATE.required_names(manifest, "pr2")), 56)
+        self.assertEqual(len(GATE.required_names(manifest, "pr2")), 57)
         manifest["pr2"].append(manifest["pr1"][0])
         with self.assertRaises(RuntimeError): GATE.required_names(manifest, "pr2")
 

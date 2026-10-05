@@ -29,3 +29,39 @@ ecbuild_add_executable(TARGET ijedi_mpas_atlas_point_scaling.x
 ecbuild_add_executable(TARGET ijedi_mpas_atlas_execution_costs.x
     SOURCES ijediMpasAtlasExecutionCosts.cc
     LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_typed_interpolation.x
+    SOURCES ijediMpasTypedInterpolation.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_variable_requests.x
+    SOURCES ijediMpasVariableRequests.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_analysis_bridge.x
+    SOURCES ijediMpasAnalysisBridge.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_increment_algebra.x
+    SOURCES ijediMpasIncrementAlgebra.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_oops_getvalues_tlad.x
+    SOURCES ijediMpasOopsGetValuesTlad.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_state_atlas_views.x
+    SOURCES ijediMpasStateAtlasViews.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_handle_ownership.x
+    SOURCES ijediMpasHandleOwnership.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_transfer_probe.x
+    SOURCES ijediMpasTransferProbe.cc
+    LIBS ijedi)
+
+ecbuild_add_executable(TARGET ijedi_mpas_partial_transforms.x
+    SOURCES ijediMpasPartialTransforms.cc
+    LIBS ijedi)

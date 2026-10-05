@@ -48,7 +48,7 @@ jobs:
         test ! -e "$GITHUB_WORKSPACE/Build"
         mkdir "$GITHUB_WORKSPACE/Build"
         cd "$GITHUB_WORKSPACE/Build"
-        ecbuild -C "$IJEDI_MPAS_RELEASE_INPUTS_FILE" -DIJEDI_MPAS_RELEASE_STAGE=pr1 \
+        ecbuild -C "$IJEDI_MPAS_RELEASE_INPUTS_FILE" -DIJEDI_MPAS_RELEASE_STAGE=pr2 \
           -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DMPI_ARGS="--map-by :OVERSUBSCRIBE" \
           "$GITHUB_WORKSPACE/i-jedi/bundle"
     - name: Build and qualify fresh I-JEDI products
@@ -58,7 +58,7 @@ jobs:
         python3 "$GITHUB_WORKSPACE/i-jedi/tools/qualification/run_p0_p2_release_gate.py" \
           --source "$GITHUB_WORKSPACE/i-jedi" --build "$GITHUB_WORKSPACE/Build/ijedi" \
           --manifest "$GITHUB_WORKSPACE/i-jedi/docs/P0_P2_REQUIRED_TESTS.json" \
-          --stage pr1 --output "$GITHUB_WORKSPACE/mpas-qualification" \
+          --stage pr2 --output "$GITHUB_WORKSPACE/mpas-qualification" \
           --lock-file "$GITHUB_WORKSPACE/mpas-qualification.lock" \
           --build-jobs 2 --test-jobs 2
     - name: Build all remaining dependency targets and run their full gate

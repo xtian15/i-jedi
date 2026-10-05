@@ -24,6 +24,24 @@ MPAS `State::read()` and `State::write()` reject before accessing views; restart
 uses authenticated serialization. Nonlinear steps check the model inventory,
 timestep and support before changing the native state or valid time.
 
+## Analysis and spatial variable transforms
+
+Analysis Increments own typed control, native or GeoVaL inventories. Shape,
+location, level/component labels, actual field names and owner descriptors must
+agree. Views cannot create a second native authority. Failed imports, exports
+and derivative calls preserve the caller's output and the native state.
+
+Public variable names and wind semantics resolve through the model owner. Native
+control-wind injection is `P`; covectors return through its declared-measure
+adjoint `P*`. Diagnostic edge-to-cell reconstruction is a separate operation.
+Gas-only humidity is `rv / (1 + rv)` with zero condensate derivatives. The
+condensed-water-inclusive quantity has a distinct public name.
+
+Nonlinear variable changes and OOPS LocalInterpolator compose model-owned JVPs
+and VJPs with authenticated Atlas operators. MPAS inverse TL/AD accepts only an
+identical typed visible inventory in its original order; selections, cross-space
+maps and rectangular wind inverses reject.
+
 ## Dependency boundary
 
 The series pins OOPS 1.13.0 and the declared Atlas 0.46.0 contribution. OOPS needs

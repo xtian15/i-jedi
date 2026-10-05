@@ -12,6 +12,7 @@
     "ijedi_mpas_retired_geometry_absent"
   ],
   "pr2": [
+    "ijedi_mpas_variable_requests",
     "ijedi_mpas_variable_schema",
     "ijedi_mpas_state_atlas_views",
     "ijedi_mpas_increment_algebra",

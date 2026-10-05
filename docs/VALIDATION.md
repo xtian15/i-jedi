@@ -45,7 +45,7 @@ Use `pr1` for geometry/State and `pr2` for the stacked analysis change.
 python3 -B test/tools/test_release_gate.py
 python3 -B tools/qualification/run_p0_p2_release_gate.py \
   --source "$PWD" --build "$PWD/build" \
-  --manifest "$PWD/docs/P0_P2_REQUIRED_TESTS.json" --stage pr1 \
+  --manifest "$PWD/docs/P0_P2_REQUIRED_TESTS.json" --stage pr2 \
   --output "$PWD/../qualification" --lock-file "$SHARED_LOCK_FILE" \
   --build-jobs 2 --test-jobs 2
 ```
